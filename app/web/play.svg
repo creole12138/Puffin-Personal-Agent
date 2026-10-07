@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">云朵小管家漂浮播放按钮</title>
+  <desc id="desc">带轻微俯视透视、柔和投影和播放三角形的圆形按钮图标</desc>
+  <defs>
+    <linearGradient id="shadow" x1="31" y1="30" x2="101" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78BCE0" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#78BCE0" stop-opacity=".42"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="37" y1="20" x2="95" y2="103" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF9FF"/>
+      <stop offset="1" stop-color="#BDE6FA"/>
+    </linearGradient>
+    <linearGradient id="face" x1="42" y1="25" x2="83" y2="93" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F1FAFE"/>
+    </linearGradient>
+    <linearGradient id="play" x1="58" y1="48" x2="78" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64B8E9"/>
+      <stop offset="1" stop-color="#3C91C8"/>
+    </linearGradient>
+    <filter id="blur" x="15" y="20" width="108" height="102" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="soft" x="22" y="15" width="84" height="94" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#4B9AC5" flood-opacity=".17"/>
+    </filter>
+  </defs>
+
+  <!-- 轻微俯视后的椭圆落影，刻意压到按钮右下方，形成漂浮关系 -->
+  <ellipse cx="66" cy="99" rx="38" ry="10" fill="url(#shadow)" filter="url(#blur)" transform="rotate(7 66 99)"/>
+
+  <!-- 外轮廓：顶部略宽、底部略收，避免小尺寸使用时显得扁塌 -->
+  <g filter="url(#soft)" transform="rotate(-4 64 61)">
+    <path d="M64 18C84.9 18 101 35.7 101 57.5C101 79.3 86.5 97 64 97C41.5 97 27 79.3 27 57.5C27 35.7 43.1 18 64 18Z" fill="url(#rim)"/>
+    <path d="M64 24C83.1 24 96.5 39.1 96.5 57.6C96.5 76.2 83.5 90.9 64 90.9C44.5 90.9 31.5 76.2 31.5 57.6C31.5 39.1 44.9 24 64 24Z" fill="url(#face)" stroke="#D4EFFC" stroke-width="1.5"/>
+
+    <!-- 云朵高光，让轮廓保持“云朵小管家”的柔和感 -->
+    <ellipse cx="51" cy="39" rx="16" ry="7" fill="#fff" fill-opacity=".72" transform="rotate(-13 51 39)"/>
+    <ellipse cx="42" cy="53" rx="5" ry="10" fill="#fff" fill-opacity=".48"/>
+
+    <!-- 播放符号略向右上偏，和按钮的透视方向一致 -->
+    <path d="M56.8 45.6C55.5 44.8 53.8 45.7 53.8 47.3V69.6C53.8 71.3 55.5 72.2 56.8 71.4L77.6 59.2C78.8 58.5 78.8 56.8 77.6 56L56.8 45.6Z" fill="url(#play)"/>
+    <path d="M58 49.6L73.6 58.6L58 67.7V49.6Z" fill="#8ED4F7" fill-opacity=".24"/>
+  </g>
+</svg>

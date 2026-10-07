@@ -326,7 +326,7 @@ function activeView(c) {
     <div class="panel pad24">${premisesBlock(c)}</div>
     <div class="panel pad24">${actionsBlock(c)}</div>
     <div class="cta2">
-      ${canDemo ? `<button class="demo" data-act="demo-change">演示：小王发来新的预算表（50 万 → 30 万）</button>`
+      ${canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
         : `<label class="demo" style="cursor:pointer" data-drop="material">给我一份新材料，我看看会不会改变什么<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label>`}
       <button class="tl" data-act="timeline">时间线</button>
     </div>
