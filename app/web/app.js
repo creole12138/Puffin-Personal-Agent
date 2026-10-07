@@ -147,7 +147,7 @@ function nav() {
     ${S.folder ? `<div class="grant">项目文件夹「${esc(S.folder.name)}」<div class="row"><span class="faint">网页开着时检查</span><button class="link" data-act="folder-stop">停止</button></div></div>` : ""}
     ${cal ? `<div class="grant">日历${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)} 检查过` : ""}<div class="row"><button class="link" data-act="cal-check">立即检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></div></div>` : ""}
     ${grants.filter((g) => g.source === "local_folder").map((g) => `<div class="grant">${esc(g.scopeLabel)}<div class="row"><span class="faint">${timeAgo(g.grantedAt)}</span><button class="link" data-act="revoke" data-id="${g.id}">收回</button></div></div>`).join("")}
-    ${!S.folder && !cal ? `<div class="s12 faint">还没有接管文件夹或日历，可以在<a href="#" data-act="home">首页</a>连上</div>` : ""}
+    ${!S.folder && !cal ? `<div class="s12 faint">还没有接管文件夹或日历</div>` : ""}
     <button class="link" style="text-align:left;color:var(--ink3)" data-act="delete">${S.confirmDelete ? "再点一次，确认删除这个工作区" : "删除这个工作区"}</button>
   </div>`;
 }
