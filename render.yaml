@@ -23,6 +23,8 @@ services:
         value: /var/data/llm-cache
       - key: LLM_DAILY_LIMIT_PER_WORKSPACE
         value: "60"
+      - key: LLM_DAILY_LIMIT_GLOBAL      # 全站每日上限，防止被刷费用
+        value: "800"
       - key: DISPLAY_TZ
         value: Asia/Shanghai
     disk:

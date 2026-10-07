@@ -15,6 +15,12 @@ export function pushChat(state: AgentState, scope: string, role: ChatEntry["role
   if (state.chats[scope]!.length > 200) state.chats[scope] = state.chats[scope]!.slice(-200);
 }
 
+/** 模型服务的原始报错只进日志，给用户看的是一句人话 */
+function friendlyError(raw?: string): string {
+  if (raw) console.error("[model]", raw);
+  return "模型服务暂时不可用，请稍后再试";
+}
+
 function lastText(messages: unknown[]): string {
   const m = [...messages].reverse().find((x: any) => x.role === "assistant") as any;
   return (m?.content ?? []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("").trim();
@@ -102,7 +108,7 @@ export async function makePlan(state: AgentState, brains: Brains, cardId: ID, re
   await agent.prompt(revise?.length && previous
     ? `前提变了：${revise.map((r) => `${r.label} ${r.from} → ${r.to}`).join("；")}。\n按最新信息修订下面这份计划；没受影响的步骤原样保留（逐字不变），受影响的改写。\n原计划：\n${previous.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`
     : "请拟执行计划。");
-  if (!plan) throw new Error(agent.state.errorMessage ? `模型调用失败：${agent.state.errorMessage}` : "没能生成执行计划");
+  if (!plan) throw new Error(agent.state.errorMessage ? friendlyError(agent.state.errorMessage) : "没能生成执行计划");
   if (revise?.length && previous) {
     // 合并多次修订的变化：同一前提只保留最初的 from 和最新的 to
     const merged = [...(previous.revision?.stale ? [] : previous.revision?.changes ?? [])];
@@ -135,7 +141,7 @@ export async function runPlan(state: AgentState, brains: Brains, cardId: ID) {
     tools: cardTools({ state, cardId, assess: brains.assess }), workState: cardSummary(state, cardId),
     systemPrompt: "用户已确认下面的执行计划，按步骤推进。每步用工具实际完成（起草文档要写出完整可用的内容）。对外消息只起草。完成后用两三句话告诉用户做了什么、还差什么、下一步是什么。" });
   await agent.prompt(`执行计划：\n${c.plan.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`);
-  const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `执行中出了问题：${agent.state.errorMessage}` : "计划里的事做完了。");
+  const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `执行中出了问题：${friendlyError(agent.state.errorMessage)}。` : "计划里的事做完了。");
   c.updatedAt = now();
   pushChat(state, cardId, "agent", reply);
   return { reply };
@@ -162,7 +168,7 @@ export async function chat(state: AgentState, brains: Brains, cardId: ID, text: 
       "需要起草就起草；只是提问就直接回答，不要调用工具。",
     ].join("\n") });
   await agent.prompt(`${history ? `之前的对话：\n${history}\n\n` : ""}${quote ? `用户引用了你说的：「${quote}」\n` : ""}用户：${text}`);
-  const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `出了点问题：${agent.state.errorMessage}` : "好的。");
+  const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `${friendlyError(agent.state.errorMessage)}。` : "好的。");
   c.updatedAt = now();
   pushChat(state, cardId, "agent", reply, made.length ? { proposalIds: made.map((p) => p.id) } : {});
   return { reply, proposals: made };

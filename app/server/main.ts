@@ -20,6 +20,13 @@ const calendar = new CalendarWatcher(mgr, Number(process.env.CALENDAR_POLL_SECON
 
 const MIME: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon" };
 
+/** 给页面的报错：模型服务的原始报错（可能含 key 片段、内部细节）只进服务器日志 */
+function publicMessage(err: Error): string {
+  const raw = err.message ?? "";
+  if (err.name === "ProviderError" || /OpenAI \d{3}|api key|sk-[\w*-]{4,}/i.test(raw)) return "模型服务暂时不可用，请稍后再试。";
+  return raw.replace(/sk-[\w*-]{4,}/g, "sk-***");
+}
+
 function send(res: ServerResponse, code: number, body: unknown) {
   res.writeHead(code, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(body));
@@ -114,7 +121,7 @@ const server = createServer(async (req, res) => {
     const err = e as Error;
     const code = err instanceof LimitError ? 429 : err instanceof SyntaxError ? 400 : 400;
     if (!(err instanceof LimitError)) console.error(err);
-    send(res, code, { error: err.message });
+    send(res, code, { error: publicMessage(err) });
   }
 });
 

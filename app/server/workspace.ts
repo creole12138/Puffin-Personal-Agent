@@ -15,6 +15,10 @@ import { confirmProposal, markCorrected, propose, rollbackTo, type Proposal } fr
 
 export class LimitError extends Error {}
 
+/** 全站每日模型调用上限：防止有人反复新建工作区刷掉费用 */
+const GLOBAL_LIMIT = Number(process.env.LLM_DAILY_LIMIT_GLOBAL ?? 800);
+const globalUsage = { day: new Date().toDateString(), calls: 0 };
+
 export class Workspace {
   private queue: Promise<unknown> = Promise.resolve();
   private listeners = new Set<(s: AgentState) => void>();
@@ -47,6 +51,9 @@ export class Workspace {
     const today = new Date().toDateString();
     if (today !== this.day) { this.day = today; this.llmCallsToday = 0; }
     if (this.llmCallsToday + n > this.limit) throw new LimitError(`今天这个工作区的模型调用次数已用完（${this.limit} 次），明天再来，或者导出状态后在本地继续。`);
+    if (globalUsage.day !== today) { globalUsage.day = today; globalUsage.calls = 0; }
+    if (globalUsage.calls + n > GLOBAL_LIMIT) throw new LimitError("今天的体验名额用完了，明天再来；也可以先点「载入一个完整的例子」看看。");
+    globalUsage.calls += n;
     this.llmCallsToday += n;
   }
 
