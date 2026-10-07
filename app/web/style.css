@@ -391,3 +391,16 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .start .prompt:nth-child(1){background:linear-gradient(135deg,#E3F6EF 0%,#C9ECDF 55%,#B5E2D9 100%)}
 .start .prompt:nth-child(2){background:linear-gradient(135deg,#FFF1E6 0%,#FCE0CF 55%,#F7D3D8 100%)}
 .start .prompt:hover{border-color:rgba(27,43,51,.12)}
+
+/* 连接 */
+.cn{display:flex;align-items:center;gap:10px;padding:6px 2px;font-size:13px;color:var(--ink)}
+.cn-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
+.cn-t{flex:1;min-width:0}.cn-s{font-size:11px;color:var(--ink4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cn.on .cn-s{color:var(--mint)}
+.cn.off{color:var(--ink3)}.cn.off .cn-ic{filter:grayscale(.35);opacity:.75}
+.cn-btn{border:1px solid var(--line2);background:#fff;border-radius:999px;font-size:12px;padding:2px 10px;color:var(--ink2);cursor:pointer}
+.cn-btn:hover{border-color:var(--mint);color:var(--mint)}
+.cn-soon{border:0;background:var(--line3);border-radius:999px;font-size:11px;padding:2px 8px;color:var(--ink4);cursor:pointer}
+.cn-sep{font-size:11px;color:var(--ink4);margin-top:6px;padding-top:8px;border-top:1px dashed var(--line2)}
+.cn-cal{display:flex;gap:6px;padding:0 0 6px 38px}.cn-cal input{flex:1;min-width:0;height:28px;font-size:12px;border:1px solid var(--line2);border-radius:8px;padding:0 8px}
+.menu .danger{color:var(--red)}

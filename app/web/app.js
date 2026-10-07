@@ -73,6 +73,7 @@ function render() {
   const atBottom = scrollMsgs ? scrollMsgs.scrollHeight - scrollMsgs.scrollTop - scrollMsgs.clientHeight < 40 : true;
   $app.innerHTML = S.wsId ? shell() : landing();
   if (S.wsId && S.preview) $app.insertAdjacentHTML("beforeend", previewModal());
+  if (S.wsId && S.mats) $app.insertAdjacentHTML("beforeend", matsModal());
   if (S.busy) $app.insertAdjacentHTML("beforeend", `<div class="busy"><div class="box2">${AV(44, 39)}<div>${S.busy.split("\n").map((t, i) => `<div class="${i ? "s12 muted" : ""}">${esc(t)}</div>`).join("")}</div><div class="spin"></div></div></div>`);
   if (keep) { const el = $app.querySelector(`[data-keep="${keep}"]`); if (el) { el.focus(); try { el.setSelectionRange(...sel); } catch {} } }
   const m = $app.querySelector(".main"); if (m && scrollMain) m.scrollTop = scrollMain;
@@ -112,7 +113,9 @@ function shell() {
         ${S.more ? `<div class="menu" role="menu">
           <button role="menuitem" data-act="copy-link">复制这个工作区的链接<span>用它随时回到这里</span></button>
           <a role="menuitem" href="/api/w/${S.wsId}/export" download>导出工作状态<span>下载全部内容，可在别处导入继续；包含你给过的材料原文</span></a>
+          <button role="menuitem" data-act="open-mats">全部材料<span>这个工作区里你给过的文件</span></button>
           <a role="menuitem" href="/">导入 / 新建工作区<span>回到开始页</span></a>
+          <button role="menuitem" class="danger" data-act="delete">${S.confirmDelete ? "再点一次，确认删除" : "删除这个工作区"}<span>工作卡、材料和对话都会删除，无法恢复</span></button>
         </div>` : ""}</div>
     </div>
     <div class="cols">
@@ -142,14 +145,44 @@ function nav() {
     : `<div class="s12 faint" style="line-height:1.7;padding:4px">${projects.length ? "暂无" : "还没有工作。接住的第一件事会出现在这里，相关的事多了，我会建议归成项目。"}</div>`}
   <button class="newthing" data-act="home">＋ 开启一件新的事</button>
   <div class="sources">
-    <div class="nav-title">已连接</div>
-    <div class="src-row"><span>材料 ${mats} 份</span><label class="link" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>
-    ${S.folder ? `<div class="grant">项目文件夹「${esc(S.folder.name)}」<div class="row"><span class="faint">网页开着时检查</span><button class="link" data-act="folder-stop">停止</button></div></div>` : ""}
-    ${cal ? `<div class="grant">日历${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)} 检查过` : ""}<div class="row"><button class="link" data-act="cal-check">立即检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></div></div>` : ""}
-    ${grants.filter((g) => g.source === "local_folder").map((g) => `<div class="grant">${esc(g.scopeLabel)}<div class="row"><span class="faint">${timeAgo(g.grantedAt)}</span><button class="link" data-act="revoke" data-id="${g.id}">收回</button></div></div>`).join("")}
-    ${!S.folder && !cal ? `<div class="s12 faint">还没有接管文件夹或日历</div>` : ""}
-    <button class="link" style="text-align:left;color:var(--ink3)" data-act="delete">${S.confirmDelete ? "再点一次，确认删除这个工作区" : "删除这个工作区"}</button>
+    <div class="nav-title">连接</div>
+    ${connectors(grants, cal)}
   </div>`;
+}
+
+// ---------- 连接 ----------
+const CI = {
+  folder: ["#E3F3EE", "#178A73", `<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.6l2 2.2h8.4A1.5 1.5 0 0 1 21 9.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/>`],
+  cal: ["#FDEEE4", "#C2622D", `<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>`],
+  mail: ["#FCE8E6", "#C5392F", `<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>`],
+  code: ["#ECEEF1", "#24292F", `<circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8M18 10c0 4-6 3-10 6"/>`],
+  drive: ["#E7F0FD", "#2D6FD2", `<path d="M8.5 4h7l5.5 9.5-3.5 6h-11L3 13.5z"/><path d="M8.5 4 12 10M3 13.5h11M17.5 19.5 14 13.5"/>`],
+  health: ["#FDE8EE", "#D23A63", `<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>`],
+};
+const cIcon = (k) => { const [bg, fg, d] = CI[k]; return `<span class="cn-ic" style="background:${bg};color:${fg}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg></span>`; };
+function connectors(grants, cal) {
+  const row = (k, name, status, right, cls = "") => `<div class="cn ${cls}">${cIcon(k)}<div class="cn-t"><div>${name}</div>${status ? `<div class="cn-s">${status}</div>` : ""}</div>${right}</div>`;
+  const fGrants = grants.filter((g) => g.source === "local_folder");
+  const folder = S.folder
+    ? row("folder", "本机项目文件夹", `「${esc(S.folder.name)}」· 网页开着时检查`, `<button class="link" data-act="folder-stop">停止</button>`, "on")
+    : fGrants.length ? row("folder", "本机项目文件夹", `${esc(fGrants[0].scopeLabel)}`, `<button class="link" data-act="revoke" data-id="${fGrants[0].id}">收回</button>`, "on")
+    : "showDirectoryPicker" in window ? row("folder", "本机项目文件夹", "", `<button class="cn-btn" data-act="folder">连接</button>`)
+    : row("folder", "本机项目文件夹", "需要 Chrome 或 Edge", "");
+  const calRow = cal
+    ? row("cal", "日历", `已连接${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)}检查过` : ""}`, `<span class="row" style="gap:6px"><button class="link" data-act="cal-check">检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></span>`, "on")
+    : row("cal", "日历", "", `<button class="cn-btn" data-act="nav-cal">连接</button>`)
+      + (S.navCal ? `<div class="cn-cal"><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="navcal"><button class="btn sm mint" data-act="cal">连接</button></div>` : "");
+  const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
+    .map(([k, n]) => row(k, n, "", `<button class="cn-soon" data-act="soon" data-v="${n}">即将支持</button>`, "off")).join("");
+  return folder + calRow + `<div class="cn-sep">示意 · 即将支持</div>` + soon;
+}
+function matsModal() {
+  if (!S.mats) return "";
+  const ev = Object.values(st().evidence).filter((e) => !["chat", "edit"].includes(e.ref));
+  return `<div class="modal-bg" data-act="close-mats"><div class="modal" role="dialog" aria-label="全部材料" data-act="noop">
+    <div class="modal-h">${ICON_FILE}<b>全部材料 · ${ev.length} 份</b><span style="flex:1"></span>
+      <label class="btn sm mint" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label><button class="choice sm" data-act="close-mats">关闭</button></div>
+    <div style="padding:8px 20px 16px;overflow:auto">${ev.map((e) => `<div class="li"><div><div>${esc(e.title)}</div><div class="s12 faint">${esc((e.excerpt || "").slice(0, 60))}</div></div><span class="s12 faint" style="white-space:nowrap">${e.at ? timeAgo(e.at) : ""}</span></div>`).join("") || `<div class="s13 muted" style="padding:12px 0">还没有材料。可以在首页把文件拖进输入框，或点「添加」。</div>`}</div></div></div>`;
 }
 
 // ---------- 首页 ----------
@@ -715,6 +748,10 @@ const actions = {
   replan: (el) => withBusy("我换个思路再拟一版", () => api(`/cards/${el.dataset.id}/plan`, {})),
   run: (el) => withBusy("我开始动手了：读材料、起草、排提醒\n可能要一两分钟，做完会在右边告诉你", async () => { await api(`/cards/${el.dataset.id}/run`, {}); }),
   why() { S.why = !S.why; render(); },
+  "nav-cal"() { S.navCal = !S.navCal; render(); if (S.navCal) $app.querySelector('[data-keep="navcal"]')?.focus(); },
+  soon(el) { toast(`${el.dataset.v} 还在示意阶段，下一版接入`); },
+  "open-mats"() { S.more = false; S.mats = true; render(); },
+  "close-mats"() { S.mats = false; render(); },
   preview(el) { S.preview = el.dataset.id; render(); },
   "close-preview"() { S.preview = null; render(); },
   "download-out"(el) { const a = st().actions[el.dataset.id]; const url = URL.createObjectURL(new Blob([`# ${a.output.title}\n\n${a.output.body}\n`], { type: "text/markdown;charset=utf-8" }));
@@ -753,7 +790,7 @@ const actions = {
   revoke: (el) => withBusy("好，我不再看那里了", async () => { const g = st().grants[el.dataset.id]; await api(`/grants/${el.dataset.id}/revoke`, {}); if (g?.source === "local_folder" && S.folder?.grantId === g.id) { S.folder = null; clearTimeout(folderTimer); } }),
   folder: () => pickFolder().catch((e) => toast(e.message, true)),
   "folder-stop"() { const id = S.folder?.grantId; S.folder = null; clearTimeout(folderTimer); if (id) actions.revoke({ dataset: { id } }); },
-  cal: () => withBusy("我看一眼你的日历", async () => { const r = await api("/calendar", { url: S.calUrl }); S.calUrl = ""; S.calOpen = false; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
+  cal: () => withBusy("我看一眼你的日历", async () => { const r = await api("/calendar", { url: S.calUrl }); S.calUrl = ""; S.calOpen = false; S.navCal = false; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
   "cal-check": () => withBusy("我看看日历有没有变", async () => { const r = await api("/calendar/check", {}); if (r.result.changes.length) toast(`日历有 ${r.result.changes.length} 处变化`); else toast("日历没有变化"); }),
   "more-news"() { S.moreNews = !S.moreNews; render(); },
   "more-next"() { S.moreNext = !S.moreNext; render(); },
@@ -777,7 +814,7 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("input", (e) => { const k = e.target.dataset?.bind; if (k) S[k] = e.target.value; });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && S.preview) { S.preview = null; render(); return; }
+  if (e.key === "Escape" && (S.preview || S.mats)) { S.preview = null; S.mats = false; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
