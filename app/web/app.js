@@ -134,7 +134,7 @@ function nav() {
     const cs = cardsOf(p.id), att = cs.filter(needsYou).length;
     return `<button class="proj ${S.view === "project" && S.proj === p.id ? "on" : ""}" data-act="project" data-id="${p.id}">
       <div class="name"><span>${esc(p.name)}</span>${att ? `<span class="tag warn">${att} 待决定</span>` : ""}</div>
-      <div class="s11 muted" style="margin-top:4px">${cs.length} 项工作 · 共享 ${p.premiseIds.length} 个前提</div></button>
+      <div class="s11 muted" style="margin-top:4px">${cs.length} 项工作 · 共享 ${p.premiseIds.length} 个前提条件</div></button>
       ${cs.length ? `<div class="tasks">${cs.map(taskBtn).join("")}</div>` : ""}`; }).join("")}
   <div class="nav-title" style="${projects.length ? "margin-top:10px" : ""}">${projects.length ? "未归类" : "工作"}</div>
   ${loose.length ? `<div class="tasks" style="border:none;margin:0;padding:0">${loose.map(taskBtn).join("")}</div>`
@@ -369,7 +369,7 @@ function rippleView(c, pc) {
       ${on.filter((i) => i.handling === "compensate").map((i) => box("comp", "已执行，无法撤回", i, comp(i) ? `<div class="s12" style="margin-top:6px">${comp(i).approvedAt ? "更正消息已确认，在右边可以复制去发送" : "我起草了一份更正消息，在右边等你确认"}</div>` : "")).join("")}
       ${on.filter((i) => i.handling === "unaffected").map((i) => box("keep", "仍然成立", i)).join("")}
     </div>
-    ${other.length ? `<div class="also"><div class="s12 muted">同一项目里也受影响${c.projectId ? `（${esc(p?.label)}是${esc(s.projects[c.projectId]?.name)}的共享前提）` : ""}</div>
+    ${other.length ? `<div class="also"><div class="s12 muted">同一项目里也受影响${c.projectId ? `（${esc(p?.label)}是${esc(s.projects[c.projectId]?.name)}的共享前提条件）` : ""}</div>
       ${other.map((i) => `<div>· ${esc(s.workCards[i.workCardId]?.title)}：${esc(name(i))}，<span style="color:${i.handling === "auto_updated" ? "var(--green)" : i.handling === "compensate" ? "var(--red)" : "var(--amber)"}">${{ auto_updated: "已自动调整", paused: "等上面决定", needs_user: "需要你决定", compensate: "已发生，已起草更正" }[i.handling]}</span></div>`).join("")}</div>` : ""}
     <div><button class="btn ghost" data-act="show-card">看工作卡</button></div>
   </div>`;
@@ -416,7 +416,7 @@ function projectView() {
     <div><div class="lbl">项目</div><div style="font-size:28px;font-weight:700;margin-top:2px">${esc(p.name)}</div>${p.goal ? `<div style="font-size:14px;color:var(--ink2);margin-top:6px">目标：${esc(p.goal)}</div>` : ""}</div>
     ${p.premiseIds.length ? `<div class="grid3">${p.premiseIds.map((id) => s.premises[id]).filter(Boolean).map((pr) => {
       const was = pr.history.at(-1)?.value, n = refs(pr.id);
-      return `<div class="prem ${was && was !== pr.value ? "changed" : pr.confirmed ? "" : "unconf"}"><div class="lbl">共享前提 · ${esc(pr.label)}</div><div style="font-size:16px;margin-top:4px">${esc(pr.value)}${was && was !== pr.value ? `<span class="s12 muted">（原 ${esc(was)}）</span>` : ""}</div>
+      return `<div class="prem ${was && was !== pr.value ? "changed" : pr.confirmed ? "" : "unconf"}"><div class="lbl">共享前提条件 · ${esc(pr.label)}</div><div style="font-size:16px;margin-top:4px">${esc(pr.value)}${was && was !== pr.value ? `<span class="s12 muted">（原 ${esc(was)}）</span>` : ""}</div>
         <div class="s11" style="margin-top:6px;color:${pr.confirmed ? "var(--ink3)" : "var(--red)"}">${pr.confirmed ? "" : "未确认 · "}被 ${n} 项工作引用</div></div>`; }).join("")}</div>` : ""}
     ${changed.length ? `<div class="amber">${changed.map((pc) => `${esc(s.premises[pc.premiseId]?.label)}变化影响了本项目 ${new Set(pc.impacts.filter((i) => i.handling !== "unaffected").map((i) => i.workCardId)).size} 项工作：${pc.impacts.filter((i) => i.handling === "needs_user").length} 项需要你决定，${pc.impacts.filter((i) => i.handling === "auto_updated").length} 项已自动调整`).join("；")}</div>` : ""}
     <div class="row"><div class="lbl" style="flex-grow:1">工作</div><button class="btn outline-mint" data-act="new-in-proj">＋ 在这个项目里开始新对话</button></div>
@@ -453,7 +453,7 @@ function demoView() {
   if (k === 2) body = `${cap("变化发生后，我不会把它埋在聊天记录里。你下次打开页面，会在三个地方同时看到它；点进去是一张影响清单，只有真正需要你拍板的事才会等你。")}
     <div class="grid3" style="gap:12px">
       <div class="box"><div class="lbl">① 左栏：项目上出现标记</div>
-        <div class="proj" style="pointer-events:none"><div class="name"><span>新版上线</span><span class="tag warn">1 待决定</span></div><div class="s11 muted" style="margin-top:4px">3 项工作 · 共享 2 个前提</div></div></div>
+        <div class="proj" style="pointer-events:none"><div class="name"><span>新版上线</span><span class="tag warn">1 待决定</span></div><div class="s11 muted" style="margin-top:4px">3 项工作 · 共享 2 个前提条件</div></div></div>
       <div class="box"><div class="lbl">② 首页：自你上次离开</div>
         <div class="box" style="border-color:var(--amber-line);gap:6px;padding:12px"><div class="s12" style="color:var(--amber);font-weight:500">需要你决定 · 1</div><div class="s13">设计只剩 1 人，「10 月 15 日上灰度」需要重新决定</div></div></div>
       <div class="box"><div class="lbl">③ 对话：我主动说</div>
