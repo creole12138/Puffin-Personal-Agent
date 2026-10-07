@@ -1,0 +1,31 @@
+# Render 部署配置（Blueprint）。在 Render 控制台选 New → Blueprint，连上 GitHub 仓库即可。
+services:
+  - type: web
+    name: puffin-personal-agent
+    runtime: node
+    plan: starter            # 常驻在线，无冷启动；免费档会休眠且不支持磁盘
+    region: singapore        # 离国内最近的 Render 区域
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_MODEL
+        value: gpt-6-sol
+      - key: OPENAI_API_KEY
+        sync: false          # 在控制台手动填写，不进仓库
+      - key: DATA_DIR
+        value: /var/data/workspaces
+      - key: LLM_CACHE_DIR
+        value: /var/data/llm-cache
+      - key: LLM_DAILY_LIMIT_PER_WORKSPACE
+        value: "60"
+      - key: DISPLAY_TZ
+        value: Asia/Shanghai
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

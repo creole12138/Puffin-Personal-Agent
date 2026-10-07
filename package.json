@@ -1,0 +1,32 @@
+{
+  "name": "puffin-personal-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Puffin 云朵小管家：把会变化的工作上下文变成有来源、有边界、可续接的工作状态（Personal Agent 产品原型）",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test app/core/test/*.test.ts",
+    "demo:ripple": "tsx scripts/demo-ripple.ts",
+    "llm:ping": "tsx scripts/llm-ping.ts",
+    "watch": "tsx scripts/watch.ts",
+    "pi:ping": "tsx scripts/pi-ping.ts",
+    "intake": "tsx scripts/intake.ts",
+    "start": "tsx app/server/start.ts",
+    "dev": "LLM_MODE=rule tsx app/server/start.ts",
+    "boot:check": "tsx scripts/boot-check.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "0.73.1",
+    "@mariozechner/pi-ai": "0.73.1",
+    "typebox": "1.1.24",
+    "tsx": "^4.19.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

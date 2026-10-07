@@ -1,0 +1,15 @@
+node_modules/
+node_modules.nosync/
+.env
+data/
+.DS_Store
+# 设计过程材料（对话截图、交接截图、原型导出），不随代码公开
+convo/
+handoff/
+*.zip
+# 给开发 Agent 的交接记忆，内部笔记
+PROJECT_MEMORY.md
+# 测试残留
+/对齐材料/
+demo-workspace/对齐材料/预算表-v3.csv
+app/web/icon.svg
