@@ -170,7 +170,7 @@ function connectors(grants, cal) {
     : row("folder", "本机项目文件夹", "需要 Chrome 或 Edge", "");
   const calRow = cal
     ? row("cal", "日历", `已连接${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)}检查过` : ""}`, `<span class="row" style="gap:6px"><button class="link" data-act="cal-check">检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></span>`, "on")
-    : row("cal", "日历", "", `<button class="cn-btn" data-act="nav-cal">连接</button>`)
+    : row("cal", "日历", "", `<button class="cn-btn" data-act="nav-cal">${S.navCal ? "取消" : "连接"}</button>`)
       + (S.navCal ? `<div class="cn-cal"><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="navcal"><button class="btn sm mint" data-act="cal">连接</button></div>` : "");
   const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
     .map(([k, n]) => row(k, n, "", `<button class="cn-soon" data-act="soon" data-v="${n}">即将支持</button>`, "off")).join("");
@@ -814,7 +814,7 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("input", (e) => { const k = e.target.dataset?.bind; if (k) S[k] = e.target.value; });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && (S.preview || S.mats)) { S.preview = null; S.mats = false; render(); return; }
+  if (e.key === "Escape" && (S.preview || S.mats || S.navCal)) { S.preview = null; S.mats = false; S.navCal = false; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
