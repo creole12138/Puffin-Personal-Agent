@@ -212,7 +212,7 @@ function home() {
       <label class="drop" data-drop="attach" style="display:flex;align-items:center;justify-content:center;cursor:pointer">拖一份材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="attach" hidden></label>
     </div>
     ${S.attach.length ? `<div class="chips">${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}<span class="s12 muted">说一句这是什么事，然后点 Tell me</span></div>` : ""}
-    <div class="s13 muted">想不出来？<a href="#" data-act="demo">快速认识云朵小管家</a>${isExample() ? "" : ` · 或者<a href="#" data-act="example">载入一个完整的例子</a>（Q4 规划）`}</div>
+    <div class="s13 muted" style="display:flex;flex-direction:column;gap:4px"><div>想不出来？<a href="#" data-act="demo">快速认识云朵小管家</a></div>${isExample() ? "" : `<div>实战示例：<a href="#" data-act="example">看看云朵小管家是怎么协助做 Q4 规划的</a></div>`}</div>
   </div>`;
 }
 
