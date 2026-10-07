@@ -387,3 +387,7 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .composer .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0}
 .start .prompt:nth-child(1){background:var(--g-mint)}
 .start .prompt:nth-child(2){background:var(--g-peach)}
+.start .prompt{min-height:104px;border-color:transparent}
+.start .prompt:nth-child(1){background:linear-gradient(135deg,#E3F6EF 0%,#C9ECDF 55%,#B5E2D9 100%)}
+.start .prompt:nth-child(2){background:linear-gradient(135deg,#FFF1E6 0%,#FCE0CF 55%,#F7D3D8 100%)}
+.start .prompt:hover{border-color:rgba(27,43,51,.12)}
