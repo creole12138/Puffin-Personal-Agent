@@ -72,6 +72,7 @@ function render() {
   const scrollMain = sameView ? $app.querySelector(".main")?.scrollTop : 0, scrollMsgs = $app.querySelector(".msgs");
   const atBottom = scrollMsgs ? scrollMsgs.scrollHeight - scrollMsgs.scrollTop - scrollMsgs.clientHeight < 40 : true;
   $app.innerHTML = S.wsId ? shell() : landing();
+  if (S.wsId && S.preview) $app.insertAdjacentHTML("beforeend", previewModal());
   if (S.busy) $app.insertAdjacentHTML("beforeend", `<div class="busy"><div class="box2">${AV(44, 39)}<div>${S.busy.split("\n").map((t, i) => `<div class="${i ? "s12 muted" : ""}">${esc(t)}</div>`).join("")}</div><div class="spin"></div></div></div>`);
   if (keep) { const el = $app.querySelector(`[data-keep="${keep}"]`); if (el) { el.focus(); try { el.setSelectionRange(...sel); } catch {} } }
   const m = $app.querySelector(".main"); if (m && scrollMain) m.scrollTop = scrollMain;
@@ -275,6 +276,17 @@ function draftView(c) {
 
 const ICON_CHEV_DOWN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
 const ICON_CHEV_UP = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>`;
+const ICON_FILE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>`;
+const ICON_MSG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>`;
+const ICON_NOTE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>`;
+const fileName = (a) => `${(a.output?.title || a.label).replace(/[\\/:*?"<>|]/g, "-")}.md`;
+function previewModal() {
+  const a = S.preview && st()?.actions[S.preview]; if (!a?.output) return "";
+  return `<div class="modal-bg" data-act="close-preview"><div class="modal" role="dialog" aria-label="${esc(fileName(a))}" data-act="noop">
+    <div class="modal-h">${ICON_FILE}<b>${esc(fileName(a))}</b><span style="flex:1"></span>
+      <button class="btn sm mint" data-act="download-out" data-id="${a.id}">下载</button><button class="choice sm" data-act="close-preview">关闭</button></div>
+    <pre class="modal-b">${esc(a.output.body)}</pre></div></div>`;
+}
 const whyBtn = () => `<button class="why-btn ${S.why ? "on" : ""}" data-act="why" aria-expanded="${S.why}">${S.why ? ICON_CHEV_UP : ICON_CHEV_DOWN}依据</button>`;
 const ICON_PEN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>`;
 /** 依赖的条件：一行一个，悬停露出铅笔，点开原地编辑 */
@@ -301,10 +313,20 @@ function actionsBlock(c) {
   return `<div><div class="lbl" style="margin-bottom:6px">动作与产出</div><div class="list">${c.actionIds.map((id) => s.actions[id]).filter(Boolean).map((a) => {
     const [l, cls] = a.compensationFor ? ["等你确认", "warn"] : a.output?.kind === "message" && a.status === "planned" ? ["草稿 · 等你发送", "info"] : ACT[a.status];
     const open = S.openDoc.has(a.id);
-    return `<div class="li" style="flex-direction:column;align-items:stretch;gap:0"><div class="row" style="justify-content:space-between">
-      <span>${esc(a.label)}${a.external ? ` <span class="tag muted">对外</span>` : ""}</span>
-      <span class="row" style="gap:8px">${a.output ? `<button class="link" data-act="doc" data-id="${a.id}">${open ? "收起" : "查看"}</button>` : ""}<span class="tag ${cls}">${l}</span></span></div>
-      ${open && a.output ? `<div class="doc">${a.output.to ? `收件人：${esc(a.output.to)}\n主题：${esc(a.output.title)}\n\n` : ""}${esc(a.output.body)}</div>` : ""}</div>`; }).join("") || `<div class="s13 faint">还没有动作</div>`}</div></div>`;
+    const o = a.output, ext = a.external ? ` <span class="tag muted">对外</span>` : "";
+    let name, body = "";
+    if (!o) name = `<span>${esc(a.label)}</span>${ext}`;
+    else if (o.kind === "document") name = `<button class="out-file" data-act="preview" data-id="${a.id}" title="预览与下载">${ICON_FILE}<span>${esc(fileName(a))}</span></button>${ext}`;
+    else {
+      name = `<button class="out-exp" data-act="doc" data-id="${a.id}" aria-expanded="${open}">${open ? ICON_CHEV_UP : ICON_CHEV_DOWN}${o.kind === "message" ? ICON_MSG : ICON_NOTE}<span>${esc(a.label)}</span></button>${ext}`;
+      if (open) body = o.kind === "message"
+        ? `<div class="omsg"><div class="omsg-h"><div><span class="faint">发给</span> ${esc(o.to || "—")}</div>${o.title ? `<div><span class="faint">主题</span> ${esc(o.title)}</div>` : ""}</div>
+            <div class="omsg-b">${esc(o.body)}</div>
+            <div class="omsg-f"><span class="faint s12">${a.status === "done" ? "已发出的原文" : "草稿还没发出，可以复制后自己发送"}</span><button class="choice sm" data-act="copy-out" data-id="${a.id}">复制</button></div></div>`
+        : `<div class="note-b">${esc(o.body)}</div>`;
+    }
+    return `<div class="li" style="flex-direction:column;align-items:stretch;gap:0"><div class="row" style="justify-content:space-between;gap:12px">
+      <span class="row" style="gap:6px;min-width:0">${name}</span><span class="tag ${cls}">${l}</span></div>${body}</div>`; }).join("") || `<div class="s13 faint">还没有动作</div>`}</div></div>`;
 }
 
 function activeView(c) {
@@ -648,6 +670,11 @@ const actions = {
   replan: (el) => withBusy("我换个思路再拟一版", () => api(`/cards/${el.dataset.id}/plan`, {})),
   run: (el) => withBusy("我开始动手了：读材料、起草、排提醒\n可能要一两分钟，做完会在右边告诉你", async () => { await api(`/cards/${el.dataset.id}/run`, {}); }),
   why() { S.why = !S.why; render(); },
+  preview(el) { S.preview = el.dataset.id; render(); },
+  "close-preview"() { S.preview = null; render(); },
+  "download-out"(el) { const a = st().actions[el.dataset.id]; const url = URL.createObjectURL(new Blob([`# ${a.output.title}\n\n${a.output.body}\n`], { type: "text/markdown;charset=utf-8" }));
+    const l = document.createElement("a"); l.href = url; l.download = fileName(a); l.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); },
+  async "copy-out"(el) { const o = st().actions[el.dataset.id].output; try { await navigator.clipboard.writeText(o.body); toast("已复制"); } catch { toast("复制失败，请手动选中复制", true); } },
   doc(el) { const id = el.dataset.id; S.openDoc.has(id) ? S.openDoc.delete(id) : S.openDoc.add(id); render(); },
   edit(el) { S.editing = el.dataset.id; S.editVal = st().premises[el.dataset.id].value; render(); },
   "edit-cancel"() { S.editing = null; render(); },
@@ -704,6 +731,7 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("input", (e) => { const k = e.target.dataset?.bind; if (k) S[k] = e.target.value; });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.preview) { S.preview = null; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
   if (e.key === "Enter" && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }

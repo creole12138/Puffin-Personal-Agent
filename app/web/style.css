@@ -297,3 +297,24 @@ mark{border-radius:3px;padding:0 2px;color:inherit}mark.g{background:var(--green
 .quote blockquote{margin:0;font-size:13.5px;line-height:1.7;color:var(--ink2)}
 .quote blockquote::before{content:"“";color:var(--ink4);margin-right:1px}.quote blockquote::after{content:"”";color:var(--ink4);margin-left:1px}
 .quote figcaption{margin-top:4px;font-size:12px;color:var(--ink4)}
+
+/* 动作产出 */
+.out-file,.out-exp{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:2px 0;font:inherit;color:var(--ink);cursor:pointer;text-align:left;min-width:0}
+.out-file svg,.out-exp svg{flex:none;color:var(--ink3)}
+.out-file span{text-decoration:underline dashed var(--ink4);text-underline-offset:4px;text-decoration-thickness:1px}
+.out-file:hover span{color:var(--mint);text-decoration-color:var(--mint)}.out-file:hover svg{color:var(--mint)}
+.out-exp:hover span,.out-exp:hover svg{color:var(--mint)}
+.omsg{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+.omsg-h{display:flex;gap:18px;flex-wrap:wrap;padding:9px 14px;background:var(--soft);border-bottom:1px solid var(--line);font-size:13px}
+.omsg-b{padding:12px 14px;font-size:14px;line-height:1.75;white-space:pre-wrap;color:var(--ink)}
+.omsg-f{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-top:1px solid var(--line3)}
+.note-b{margin-top:10px;padding:10px 14px;background:var(--soft);border-radius:10px;font-size:14px;line-height:1.7;white-space:pre-wrap}
+.choice.sm,.btn.sm{min-height:0;height:28px;padding:0 12px;font-size:12.5px}
+.modal-bg{position:fixed;inset:0;background:rgba(27,43,51,.32);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:#fff;border-radius:14px;width:min(720px,100%);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(27,43,51,.25)}
+.modal-h{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.modal-h svg{color:var(--ink3)}
+.modal-b{margin:0;padding:18px 20px;overflow:auto;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;line-height:1.75;white-space:pre-wrap;color:var(--ink)}
+.omsg{width:100%;box-sizing:border-box;white-space:normal}
+.omsg-h>div,.omsg-f>span{margin:0;padding:0}
+.choice.sm,.btn.sm{white-space:nowrap;flex:none}
