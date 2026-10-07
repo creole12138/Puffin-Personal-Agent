@@ -364,3 +364,12 @@ mark{border-radius:3px;padding:0 2px;color:inherit}mark.g{background:var(--green
 .grid3 .prompt:nth-child(1){background:var(--g-lilac)}
 .grid3 .prompt:nth-child(2){background:var(--g-mint)}
 .grid3 .prompt:nth-child(3){background:var(--g-peach)}
+
+/* 首页三种开始方式 */
+.prompt{display:flex;flex-direction:column;gap:4px;justify-content:center;cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s}
+.prompt b{font-size:16px;font-weight:600;color:var(--ink)}
+.prompt small{font-size:13px;color:var(--ink3)}
+button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,51,.08)}
+.prompt.done{cursor:default}.prompt.done small{color:var(--mint)}
+.prompt.open{cursor:default;gap:8px;border-color:var(--mint)}
+.prompt.open input{width:100%;height:32px;border:1px solid var(--line2);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff}

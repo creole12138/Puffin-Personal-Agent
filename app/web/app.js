@@ -142,19 +142,30 @@ function nav() {
     : `<div class="s12 faint" style="line-height:1.7;padding:4px">${projects.length ? "暂无" : "还没有工作。接住的第一件事会出现在这里，相关的事多了，我会建议归成项目。"}</div>`}
   <button class="newthing" data-act="home">＋ 开启一件新的事</button>
   <div class="sources">
-    <div class="nav-title">材料与授权</div>
+    <div class="nav-title">已连接的来源</div>
     <div class="src-row"><span>材料 ${mats} 份</span><label class="link" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>
-    ${S.folder ? `<div class="grant">正在关注本机文件夹「${esc(S.folder.name)}」<div class="row"><span class="faint">网页开着时检查</span><button class="link" data-act="folder-stop">停止</button></div></div>`
-      : "showDirectoryPicker" in window ? `<button class="btn" data-act="folder" style="justify-content:flex-start">选择本机文件夹</button>`
-      : `<div class="s12 faint">选择本机文件夹需要 Chrome 或 Edge</div>`}
-    ${cal ? `<div class="grant">日历已连接${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)} 检查过` : ""}<div class="row"><button class="link" data-act="cal-check">立即检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></div></div>`
-      : `<div style="display:grid;gap:6px"><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="cal"><button class="btn" data-act="cal" style="justify-self:start">连接日历</button></div>`}
+    ${S.folder ? `<div class="grant">项目文件夹「${esc(S.folder.name)}」<div class="row"><span class="faint">网页开着时检查</span><button class="link" data-act="folder-stop">停止</button></div></div>` : ""}
+    ${cal ? `<div class="grant">日历${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)} 检查过` : ""}<div class="row"><button class="link" data-act="cal-check">立即检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></div></div>` : ""}
     ${grants.filter((g) => g.source === "local_folder").map((g) => `<div class="grant">${esc(g.scopeLabel)}<div class="row"><span class="faint">${timeAgo(g.grantedAt)}</span><button class="link" data-act="revoke" data-id="${g.id}">收回</button></div></div>`).join("")}
+    ${!S.folder && !cal ? `<div class="s12 faint">还没有接管文件夹或日历，可以在<a href="#" data-act="home">首页</a>连上</div>` : ""}
     <button class="link" style="text-align:left;color:var(--ink3)" data-act="delete">${S.confirmDelete ? "再点一次，确认删除这个工作区" : "删除这个工作区"}</button>
   </div>`;
 }
 
 // ---------- 首页 ----------
+function startCards() {
+  const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt);
+  const card = (act, t, sub, extra = "") => `<button class="prompt" data-act="${act}"><b>${t}</b><small>${sub}</small>${extra}</button>`;
+  const c1 = card("start-free", "开始一件新的事", "我们一起把它理清楚");
+  const c2 = S.folder ? `<div class="prompt done"><b>接管项目文件夹</b><small>正在关注「${esc(S.folder.name)}」，有变动会提醒你</small></div>`
+    : "showDirectoryPicker" in window ? card("folder", "接管项目文件夹", "有变动主动提醒你")
+    : `<div class="prompt done"><b>接管项目文件夹</b><small>需要用 Chrome 或 Edge 打开</small></div>`;
+  const c3 = cal ? `<div class="prompt done"><b>连上日历</b><small>已连接，变化帮你盯着</small></div>`
+    : S.calOpen ? `<div class="prompt open"><b>连上日历</b><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="cal">
+        <div class="row" style="gap:8px"><button class="btn sm mint" data-act="cal">连接</button><button class="choice sm" data-act="cal-open">取消</button></div></div>`
+    : card("cal-open", "连上日历", "贴一个日历链接，变化帮你盯着");
+  return c1 + c2 + c3;
+}
 function revisit() {
   const s = st(), since = S.lastSeen ?? "0";
   const needs = openChanges();
@@ -192,9 +203,9 @@ function home() {
   return `<div class="wrap">
     ${first ? "" : revisit()}
     <div class="hero">${AV(84, 74)}<div class="h" style="font-size:${first ? 30 : 24}px">${title}</div></div>
-    <div style="font-size:17px;color:var(--ink2)">最近有没有一件事——</div>
+    <div style="font-size:17px;color:var(--ink2)">从这里开始——</div>
     <div class="grid3">
-      ${["你还在反复想", "明天不处理会变麻烦", "开始了却一直没收尾"].map((t) => `<button class="prompt" data-act="prompt" data-v="${t}">${t}</button>`).join("")}
+      ${startCards()}
     </div>
     <div class="ask">
       <div class="in"><input type="text" aria-label="说一件事" placeholder="比如：和 Alex 还有一些工作一直没对齐" value="${esc(S.ask)}" data-bind="ask" data-keep="ask"><button class="btn mint lg" data-act="tell">Tell me</button></div>
@@ -674,6 +685,8 @@ const actions = {
   project(el) { S.proj = el.dataset.id; S.view = "project"; render(); },
   demo() { S.view = "demo"; S.tour = 0; S.tourDecided = false; render(); },
   "demo-flip"() { S.demoFlip = !S.demoFlip; render(); },
+  "start-free"() { const i = $app.querySelector('[data-keep="ask"]'); i?.focus(); i?.scrollIntoView({ block: "center", behavior: "smooth" }); },
+  "cal-open"() { S.calOpen = !S.calOpen; render(); if (S.calOpen) $app.querySelector('[data-keep="cal"]')?.focus(); },
   prompt(el) { S.ask = `${el.dataset.v}：`; render(); $app.querySelector('[data-keep="ask"]')?.focus(); },
   example: () => withBusy("我把例子摆好", async () => { await api("/example", {}); S.lastSeen = "2026-09-28T16:00:00+08:00"; S.view = "home"; toast("载入了 Q4 规划的例子。点「和 Alex 对齐」试试前提变化"); }),
   unattach(el) { S.attach.splice(Number(el.dataset.i), 1); render(); },
@@ -742,7 +755,7 @@ const actions = {
   revoke: (el) => withBusy("好，我不再看那里了", async () => { const g = st().grants[el.dataset.id]; await api(`/grants/${el.dataset.id}/revoke`, {}); if (g?.source === "local_folder" && S.folder?.grantId === g.id) { S.folder = null; clearTimeout(folderTimer); } }),
   folder: () => pickFolder().catch((e) => toast(e.message, true)),
   "folder-stop"() { const id = S.folder?.grantId; S.folder = null; clearTimeout(folderTimer); if (id) actions.revoke({ dataset: { id } }); },
-  cal: () => withBusy("我看一眼你的日历", async () => { const r = await api("/calendar", { url: S.calUrl }); S.calUrl = ""; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
+  cal: () => withBusy("我看一眼你的日历", async () => { const r = await api("/calendar", { url: S.calUrl }); S.calUrl = ""; S.calOpen = false; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
   "cal-check": () => withBusy("我看看日历有没有变", async () => { const r = await api("/calendar/check", {}); if (r.result.changes.length) toast(`日历有 ${r.result.changes.length} 处变化`); else toast("日历没有变化"); }),
   "more-news"() { S.moreNews = !S.moreNews; render(); },
   "more-next"() { S.moreNext = !S.moreNext; render(); },
