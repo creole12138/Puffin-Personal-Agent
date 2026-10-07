@@ -266,23 +266,27 @@ function draftView(c) {
     </div>
     ${c.openQuestions.length ? `<div class="confirm"><div class="t">请确认（${unanswered}）</div>
       ${c.openQuestions.map((q, i) => `<div class="q"><div class="qt"><span class="qn">${i + 1}</span>${esc(q.question)}</div><div class="opts">${q.options.map((o) => `<button class="choice ${q.answer === o ? "on" : ""}" data-act="answer" data-card="${c.id}" data-q="${q.id}" data-v="${esc(o)}" aria-pressed="${q.answer === o}">${esc(o)}</button>`).join("")}</div></div>`).join("")}</div>` : ""}
-    <details class="more"><summary>这件事依赖什么</summary><div class="s12 muted" style="margin-top:6px">截止时间、进度这些一变，我会顺着这里检查哪些决定要跟着调整。</div><div style="display:flex;flex-direction:column;gap:14px;margin-top:12px">${premisesBlock(c)}${decisionsBlock(c)}${actionsBlock(c)}</div></details>
+    <details class="more" ${S.why ? "open" : ""}><summary>依据</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:12px">
+      <div><div class="lbl" style="margin-bottom:4px">依赖的条件</div>${conditionsList(c.premiseIds.map((id) => s.premises[id]).filter(Boolean))}</div>${decisionsBlock(c)}</div></details>
     <div class="row"><button class="btn mint lg" data-act="plan" data-id="${c.id}" ${c.plan?.status === "proposed" ? "disabled" : ""}>${c.plan?.status === "proposed" ? "计划已生成，在右边确认" : "生成执行计划"}</button>
       <span class="s12 muted">${c.plan?.status === "proposed" ? "" : unanswered ? `还有 ${unanswered} 处没确认，也可以先生成` : "确认无误，可以生成计划了"}</span></div>
   </div>`;
 }
 
-function premisesBlock(c) {
-  const s = st();
-  return `<div><div class="lbl" style="margin-bottom:6px">前提 <span class="faint">· 改一个值，看看会牵动什么</span></div><div class="list">
-    ${c.premiseIds.map((id) => s.premises[id]).filter(Boolean).map((p) => {
-      const was = p.history.at(-1)?.value;
-      if (S.editing === p.id) return `<div class="li"><div style="flex-grow:1"><div class="s12 muted">${esc(p.label)}</div><input type="text" value="${esc(S.editVal)}" data-bind="editVal" data-keep="edit" aria-label="${esc(p.label)}的新值" style="margin-top:4px"></div>
-        <div class="row" style="gap:6px;align-self:flex-end"><button class="btn mint" data-act="edit-save" data-id="${p.id}">更新</button><button class="btn ghost" data-act="edit-cancel">取消</button></div></div>`;
-      return `<div class="li"><div><div class="s12 muted">${esc(p.label)}</div><span style="font-weight:500">${esc(p.value)}</span>${was && was !== p.value ? `<span class="was">${esc(was)}</span>` : ""}${p.inferred ? ` <span class="tag info" title="${esc(p.inferred.reason)}">推断</span>` : p.confirmed ? ` <span class="tag active">已确认</span>` : ` <span class="tag warn">未确认</span>`}
-        <div class="s11 faint">来自：${p.evidenceIds.map(evTitle).map(esc).join("、") || "—"}</div></div><button class="btn ghost" data-act="edit" data-id="${p.id}">修改</button></div>`; }).join("") || `<div class="s13 faint">没有找到会影响决策的前提</div>`}
-  </div></div>`;
+const ICON_PEN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>`;
+/** 依赖的条件：一行一个，悬停露出铅笔，点开原地编辑 */
+function conditionsList(list) {
+  return `<div class="conds">${list.map((p) => {
+    const was = p.history.at(-1)?.value;
+    const state = p.inferred ? `<span class="tag info" title="${esc(p.inferred.reason)}">推断</span>` : p.confirmed ? "" : `<span class="tag warn">未确认</span>`;
+    if (S.editing === p.id) return `<div class="cond editing"><span class="c-lbl">${esc(p.label)}</span>
+      <input type="text" value="${esc(S.editVal)}" data-bind="editVal" data-keep="edit" aria-label="${esc(p.label)}的新值">
+      <button class="btn mint small-btn" data-act="edit-save" data-id="${p.id}">保存</button><button class="btn ghost small-btn" data-act="edit-cancel">取消</button></div>`;
+    return `<div class="cond" id="cond-${p.id}"><span class="c-lbl">${esc(p.label)}</span><span class="c-val">${esc(p.value)}</span>${was && was !== p.value && p.confirmed ? `<span class="was">${esc(was)}</span>` : ""}${state}
+      <span class="c-src">来自 ${p.evidenceIds.map(evTitle).map(esc).join("、") || "—"}</span>
+      <button class="pen" data-act="edit" data-id="${p.id}" aria-label="修改${esc(p.label)}" title="修改">${ICON_PEN}</button></div>`; }).join("") || `<div class="s13 faint">暂无</div>`}</div>`;
 }
+
 function decisionsBlock(c) {
   const s = st();
   return `<div><div class="lbl" style="margin-bottom:6px">决策</div><div class="list">${c.decisionIds.map((id) => s.decisions[id]).filter(Boolean).map((d) =>
@@ -303,7 +307,9 @@ function activeView(c) {
   const s = st(), d = decisionMain(c);
   const rem = c.reminders.map((r) => ({ r, w: when(r.at) })).filter(({ w }) => typeof w !== "string" && w.days >= 0).sort((a, b) => String(a.r.at).localeCompare(String(b.r.at)))[0];
   const prem = d ? d.premiseIds.map((id) => s.premises[id]).filter(Boolean) : [];
-  const unconf = c.premiseIds.map((id) => s.premises[id]).filter((p) => p && !p.confirmed);
+  const all = c.premiseIds.map((id) => s.premises[id]).filter(Boolean);
+  const others = all.filter((p) => !prem.includes(p));
+  const attention = all.filter((p) => p.inferred || !p.confirmed);
   const canDemo = c.id === "wc_alex" && s.premises.pr_budget?.value === "50 万";
   return `<div style="display:flex;flex-direction:column;gap:16px">
     ${changesFor(c.id).length ? `<div class="amber row" style="justify-content:space-between"><span>有一处前提变化需要你决定</span><button class="btn" data-act="show-ripple">去处理</button></div>` : ""}
@@ -316,14 +322,14 @@ function activeView(c) {
         <div><div class="lbl">等待</div><div class="val">${esc(c.waitingOn || "—")}</div></div>
         <div><div class="lbl">关键决策</div><div class="val row" style="gap:8px">${esc(d?.statement ?? "—")}${d ? `<button class="choice" style="padding:2px 8px;min-height:0;font-size:12px;color:var(--ink2)" data-act="why" aria-expanded="${S.why}">依据</button>` : ""}</div></div>
       </div>
-      ${S.why && d ? `<div class="why"><div style="font-weight:500">为什么是「${esc(d.statement)}」</div>
-        ${d.provenance.evidenceIds.map((id) => `<div>· 「${esc(s.evidence[id]?.excerpt.slice(0, 120))}」 <span class="muted">— ${esc(evTitle(id))}</span></div>`).join("")}
-        ${prem.map((p) => `<div>· ${esc(p.label)}：${esc(p.value)}${p.confirmed ? "" : "（未确认）"} <span class="muted">— ${p.evidenceIds.map(evTitle).map(esc).join("、")}</span></div>`).join("")}
-        <div class="muted">置信度：${{ low: "低", medium: "中", high: "高" }[d.confidence]} · ${d.provenance.confirmedBy === "user" ? `你于 ${timeAgo(d.provenance.at)} 确认` : "我整理的，还没经你确认"}</div></div>` : ""}
-      ${unconf.length ? `<div class="amber">${unconf.length} 条结论依赖未确认前提：${unconf.map((p) => `${esc(p.label)} ${esc(p.value)}`).join("、")}</div>` : ""}
+      ${S.why ? `<div class="why"><div style="font-weight:500">${d ? `为什么是「${esc(d.statement)}」` : "依据"}</div>
+        <div><div class="lbl" style="margin-bottom:4px">依赖的条件</div>${conditionsList(prem.length ? prem : c.premiseIds.map((id) => s.premises[id]).filter(Boolean))}
+          ${prem.length && others.length ? `<div class="lbl" style="margin:8px 0 4px">这件事的其他条件</div>${conditionsList(others)}` : ""}</div>
+        ${d?.provenance.evidenceIds.length ? `<div><div class="lbl" style="margin-bottom:4px">依据的原文</div>${d.provenance.evidenceIds.map((id) => `<div>「${esc(s.evidence[id]?.excerpt.slice(0, 120))}」 <span class="muted">— ${esc(evTitle(id))}</span></div>`).join("")}</div>` : ""}
+        ${d ? `<div class="muted">置信度：${{ low: "低", medium: "中", high: "高" }[d.confidence]} · ${d.provenance.confirmedBy === "user" ? `你于 ${timeAgo(d.provenance.at)} 确认` : "我整理的，还没经你确认"}</div>` : ""}</div>`
+      : attention.length ? `<button class="attn" data-act="why">${attention.map((p) => p.inferred ? `${esc(p.label)}已按推断改为 ${esc(p.value)}` : `依赖还没确认的条件：${esc(p.label)} ${esc(p.value)}`).join("；")} <span class="link">查看依据</span></button>` : ""}
       ${c.nextStep ? `<div><div class="lbl">下一步</div><div class="val">${esc(c.nextStep)}</div></div>` : ""}
     </div>
-    <div class="panel pad24">${premisesBlock(c)}</div>
     <div class="panel pad24">${actionsBlock(c)}</div>
     <div class="cta2">
       ${canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
