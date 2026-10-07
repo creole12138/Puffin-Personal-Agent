@@ -16,7 +16,7 @@ export function seedQ4(): AgentState {
       excerpt: "Alex 9/24：资源先给留存。方案 A 覆盖面更全，但要 45 万左右；B 大概 28 万。", observedAt: T("25T18:00") },
     ev_budget_v2: { id: "ev_budget_v2", source: "local_folder", ref: "对齐材料/预算表-v2.csv", title: "预算表 v2",
       excerpt: "Q4 总预算：50 万", observedAt: T("26T10:00") },
-    ev_user: { id: "ev_user", source: "user_input", ref: "chat", title: "你说的", excerpt: "和 Alex 那事一直没对齐", observedAt: T("28T09:00") },
+    ev_user: { id: "ev_user", source: "user_input", ref: "chat", title: "你说的", excerpt: "和 Alex 还有一些工作一直没对齐", observedAt: T("28T09:00") },
   };
 
   s.grants = {
@@ -76,7 +76,7 @@ export function seedQ4(): AgentState {
 
   s.chats = {
     wc_alex: [
-      { role: "user", text: "和 Alex 那事一直没对齐", at: T("28T09:00") },
+      { role: "user", text: "和 Alex 还有一些工作一直没对齐", at: T("28T09:00") },
       { role: "agent", text: "记下了，也从聊天记录里理了一版。", at: T("28T09:02") },
       { role: "agent", text: "方案 A 的对比已完成，正在做 B。财务数据小王说周二给。", at: T("28T15:30") },
     ],

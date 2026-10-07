@@ -196,7 +196,7 @@ function home() {
       ${["你还在反复想", "明天不处理会变麻烦", "开始了却一直没收尾"].map((t) => `<button class="prompt" data-act="prompt" data-v="${t}">${t}</button>`).join("")}
     </div>
     <div class="ask">
-      <div class="in"><input type="text" aria-label="说一件事" placeholder="比如：和 Alex 那事一直没对齐" value="${esc(S.ask)}" data-bind="ask" data-keep="ask"><button class="btn mint lg" data-act="tell">Tell me</button></div>
+      <div class="in"><input type="text" aria-label="说一件事" placeholder="比如：和 Alex 还有一些工作一直没对齐" value="${esc(S.ask)}" data-bind="ask" data-keep="ask"><button class="btn mint lg" data-act="tell">Tell me</button></div>
       <label class="drop" data-drop="attach" style="display:flex;align-items:center;justify-content:center;cursor:pointer">拖一份材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="attach" hidden></label>
     </div>
     ${S.attach.length ? `<div class="chips">${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}<span class="s12 muted">说一句这是什么事，然后点 Tell me</span></div>` : ""}

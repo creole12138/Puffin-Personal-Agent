@@ -63,7 +63,7 @@ export async function makeCandidate(state: AgentState, brains: Brains, text: str
           "title：把这件事写成一句要推进的事，动词开头，≤16 字；尽量保留用户原话里的关键词（人名、对象、说法），不要改换概念。\n" +
           "firstStep：这是给用户的一个按钮，表示你提出要马上帮他做的事。点下去后，你会立刻读他给的话和材料，把这件事整理成一张工作卡（目标、现状、依据、还差什么、拿不准要问他的）。" +
           "所以它必须：用你的口吻向用户提议（如“先把……理一下”“帮你把……列出来”）；描述的是整理和梳理，而不是让用户去做事，也不是去联系别人；≤20 字。\n" +
-          "例：用户说“和 Alex 那事一直没对齐”→ firstStep“先把上次聊到哪、还差什么列出来”。\n" +
+          "例：用户说“和 Alex 还有一些工作一直没对齐”→ firstStep“先把上次聊到哪、还差什么列出来”。\n" +
           "如果明显属于某个已有项目，给出 projectId 和一句理由 why（点出共同的人、材料或前提）；否则 projectId 为 null、why 为空字符串。不要编造。" },
         { role: "user", content: JSON.stringify({ said: text, projects }) },
       ],
