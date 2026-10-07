@@ -118,7 +118,7 @@ function shell() {
     <div class="cols">
       <nav class="nav" aria-label="工作与项目">${nav()}</nav>
       <main class="main">${main()}</main>
-      <aside class="chat" aria-label="和云朵小管家对话">${chatPanel()}</aside>
+      ${S.view === "home" && !allCards().length && !S.chatText ? "" : `<aside class="chat" aria-label="和云朵小管家对话">${chatPanel()}</aside>`}
     </div>
   </div>`;
 }
@@ -156,15 +156,14 @@ function nav() {
 function startCards() {
   const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt);
   const card = (act, t, sub, extra = "") => `<button class="prompt" data-act="${act}"><b>${t}</b><small>${sub}</small>${extra}</button>`;
-  const c1 = card("start-free", "开始一件新的事", "我们一起把它理清楚");
   const c2 = S.folder ? `<div class="prompt done"><b>接管项目文件夹</b><small>正在关注「${esc(S.folder.name)}」，有变动会提醒你</small></div>`
-    : "showDirectoryPicker" in window ? card("folder", "接管项目文件夹", "有变动主动提醒你")
+    : "showDirectoryPicker" in window ? card("folder", "接管项目文件夹", "丝滑推进项目执行")
     : `<div class="prompt done"><b>接管项目文件夹</b><small>需要用 Chrome 或 Edge 打开</small></div>`;
   const c3 = cal ? `<div class="prompt done"><b>连上日历</b><small>已连接，变化帮你盯着</small></div>`
     : S.calOpen ? `<div class="prompt open"><b>连上日历</b><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="cal">
         <div class="row" style="gap:8px"><button class="btn sm mint" data-act="cal">连接</button><button class="choice sm" data-act="cal-open">取消</button></div></div>`
-    : card("cal-open", "连上日历", "有变化我帮你盯着");
-  return c1 + c2 + c3;
+    : card("cal-open", "连上日历", "做你的时间管理大师");
+  return c2 + c3;
 }
 function revisit() {
   const s = st(), since = S.lastSeen ?? "0";
@@ -203,15 +202,14 @@ function home() {
   return `<div class="wrap home-wrap">
     ${first ? "" : revisit()}
     <div class="hero">${AV(84, 74)}<div class="h" style="font-size:${first ? 30 : 24}px">${title}</div></div>
-    <div style="font-size:17px;color:var(--ink2)">从这里开始——</div>
-    <div class="grid3">
-      ${startCards()}
+    <div class="grid2 start">${startCards()}</div>
+    <div class="composer" data-drop="attach">
+      <textarea rows="3" aria-label="说一件事" placeholder="说一件放不下的事，比如：和 Alex 还有一些工作一直没对齐&#10;也可以把相关文件拖进来" data-bind="ask" data-keep="ask">${esc(S.ask)}</textarea>
+      <div class="composer-f">
+        <div class="chips">${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
+        <button class="btn mint lg" data-act="tell">Tell me</button>
+      </div>
     </div>
-    <div class="ask">
-      <div class="in"><input type="text" aria-label="说一件事" placeholder="比如：和 Alex 还有一些工作一直没对齐" value="${esc(S.ask)}" data-bind="ask" data-keep="ask"><button class="btn mint lg" data-act="tell">Tell me</button></div>
-      <label class="drop" data-drop="attach" style="display:flex;align-items:center;justify-content:center;cursor:pointer">拖一份材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="attach" hidden></label>
-    </div>
-    ${S.attach.length ? `<div class="chips">${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}<span class="s12 muted">说一句这是什么事，然后点 Tell me</span></div>` : ""}
     <div class="hints"><div class="row" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9922E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="提示"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg><a href="#" data-act="demo">快速认识云朵小管家</a></div>${isExample() ? "" : `<div>应用示例：<a href="#" data-act="example">看看云朵小管家是怎么协助做 Q4 规划的</a></div>`}</div>
   </div>`;
 }
@@ -782,7 +780,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && S.preview) { S.preview = null; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
-  if (e.key === "Enter" && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
   if (e.key === "Enter" && !e.isComposing && b === "editVal") { e.preventDefault(); $app.querySelector('[data-act="edit-save"]')?.click(); }
 });
 async function materialFiles(files) {

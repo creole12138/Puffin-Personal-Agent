@@ -376,3 +376,14 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 
 .home-wrap{min-height:100%}
 .hints{margin-top:auto;align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:13px;color:var(--ink3);padding-top:24px}
+
+/* 首页：盯着卡片 + 输入框 */
+.grid2.start{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.composer{border:1px solid var(--line2);background:#fff;border-radius:16px;padding:14px 14px 10px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 10px rgba(27,43,51,.04);transition:border-color .12s}
+.composer:focus-within{border-color:var(--mint)}
+.composer.over{border-color:var(--mint);background:var(--green-bg)}
+.composer textarea{border:0;outline:0;resize:none;font:inherit;font-size:15px;line-height:1.7;background:transparent;color:var(--ink);padding:0}
+.composer-f{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.composer .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+.start .prompt:nth-child(1){background:var(--g-mint)}
+.start .prompt:nth-child(2){background:var(--g-peach)}
