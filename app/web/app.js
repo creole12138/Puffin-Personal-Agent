@@ -200,7 +200,7 @@ function revisit() {
 function home() {
   const first = allCards().length === 0, inProj = S.proj && S.view === "home" ? st().projects[S.proj] : null;
   const title = inProj ? `今天想和我一起在「${esc(inProj.name)}」里做什么呢？` : "今天想和我一起做什么呢？";
-  return `<div class="wrap">
+  return `<div class="wrap home-wrap">
     ${first ? "" : revisit()}
     <div class="hero">${AV(84, 74)}<div class="h" style="font-size:${first ? 30 : 24}px">${title}</div></div>
     <div style="font-size:17px;color:var(--ink2)">从这里开始——</div>
@@ -212,7 +212,7 @@ function home() {
       <label class="drop" data-drop="attach" style="display:flex;align-items:center;justify-content:center;cursor:pointer">拖一份材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="attach" hidden></label>
     </div>
     ${S.attach.length ? `<div class="chips">${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}<span class="s12 muted">说一句这是什么事，然后点 Tell me</span></div>` : ""}
-    <div class="s13 muted" style="display:flex;flex-direction:column;gap:4px"><div>想不出来？<a href="#" data-act="demo">快速认识云朵小管家</a></div>${isExample() ? "" : `<div>实战示例：<a href="#" data-act="example">看看云朵小管家是怎么协助做 Q4 规划的</a></div>`}</div>
+    <div class="hints"><div class="row" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9922E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="提示"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg><a href="#" data-act="demo">快速认识云朵小管家</a></div>${isExample() ? "" : `<div>应用示例：<a href="#" data-act="example">看看云朵小管家是怎么协助做 Q4 规划的</a></div>`}</div>
   </div>`;
 }
 

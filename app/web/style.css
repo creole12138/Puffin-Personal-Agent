@@ -373,3 +373,6 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .prompt.done{cursor:default}.prompt.done small{color:var(--mint)}
 .prompt.open{cursor:default;gap:8px;border-color:var(--mint)}
 .prompt.open input{width:100%;height:32px;border:1px solid var(--line2);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff}
+
+.home-wrap{min-height:100%}
+.hints{margin-top:auto;align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:13px;color:var(--ink3);padding-top:24px}
