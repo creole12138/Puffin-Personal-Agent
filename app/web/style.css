@@ -262,3 +262,38 @@ mark{border-radius:3px;padding:0 2px;color:inherit}mark.g{background:var(--green
 .small-btn{min-height:30px;padding:4px 10px;font-size:12.5px}
 .attn{align-self:flex-start;border:none;background:var(--amber-bg);color:var(--amber);border-radius:10px;padding:8px 12px;font-size:13px;text-align:left}
 .attn .link{color:var(--amber);text-decoration:underline;margin-left:6px;font-size:12.5px}
+
+/* 依据：按钮 */
+.why-btn{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px 0 7px;border:1px solid var(--line2);background:#fff;border-radius:999px;font-size:12.5px;color:var(--ink2);line-height:1;cursor:pointer}
+.why-btn:hover{border-color:var(--mint);color:var(--mint)}
+.why-btn.on{background:var(--green-bg);border-color:transparent;color:var(--green)}
+.why-details>summary{list-style:none}.why-details>summary::-webkit-details-marker{display:none}
+.why-details[open] .why-btn{background:var(--green-bg);border-color:transparent;color:var(--green)}
+.why-details[open] .why-btn svg{transform:rotate(180deg)}
+/* 依据：展开区 */
+.why2{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 0 rgba(27,43,51,.03)}
+.why2-h{font-size:15px;font-weight:700;color:var(--ink)}
+.why2 section{display:flex;flex-direction:column;gap:6px;padding-top:14px;border-top:1px solid var(--line3)}
+.why2-sub{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.04em}
+.why2-sub span{font-weight:500;color:var(--ink4);background:var(--line3);border-radius:999px;padding:0 7px;font-size:11px;line-height:18px}
+.why2-sub.minor{margin-top:10px;color:var(--ink3)}
+/* 条件行 */
+.cond{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:12px;padding:10px 8px;margin:0 -8px;border-radius:10px}
+.cond:hover{background:var(--soft)}
+.c-lbl{font-size:13px;color:var(--ink3);min-width:0}
+.c-main{min-width:0}
+.c-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.c-val{font-size:15px;font-weight:500;color:var(--ink)}
+.c-src{font-size:12px;color:var(--ink4);margin-top:2px}
+.cond .pen{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border:1px solid transparent;background:transparent;border-radius:8px;color:var(--ink3);font-size:12px;opacity:1}
+.cond .pen span{display:none}
+.cond:hover .pen{color:var(--mint);border-color:var(--line2);background:#fff}
+.cond:hover .pen span{display:inline}
+.cond .pen:hover{border-color:var(--mint)}
+.cond.editing{display:flex;gap:8px}
+/* 原文 */
+.quotes{display:flex;flex-direction:column;gap:8px}
+.quote{margin:0;background:var(--soft);border-radius:10px;padding:10px 14px}
+.quote blockquote{margin:0;font-size:13.5px;line-height:1.7;color:var(--ink2)}
+.quote blockquote::before{content:"“";color:var(--ink4);margin-right:1px}.quote blockquote::after{content:"”";color:var(--ink4);margin-left:1px}
+.quote figcaption{margin-top:4px;font-size:12px;color:var(--ink4)}
