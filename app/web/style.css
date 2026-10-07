@@ -347,3 +347,20 @@ mark{border-radius:3px;padding:0 2px;color:inherit}mark.g{background:var(--green
 .track-row{align-self:flex-start}
 .track-row::before{right:28px}
 .tk-tip{bottom:auto;top:calc(100% + 4px)}
+/* 卡片渐变背景 */
+:root{
+  --g-panel:linear-gradient(160deg,#FFFFFF 0%,#FBFDFD 45%,#EEF6F8 100%);
+  --g-sky:linear-gradient(140deg,#FFFFFF 0%,#EAF3FB 100%);
+  --g-mint:linear-gradient(140deg,#FFFFFF 0%,#E4F5EF 100%);
+  --g-lilac:linear-gradient(140deg,#FFFFFF 0%,#EFEBFA 100%);
+  --g-peach:linear-gradient(140deg,#FFFFFF 0%,#FCEFE6 100%);
+}
+.panel,.box,.cand{background:var(--g-panel)}
+.proj{background:var(--g-sky)}
+.proj.on{background:linear-gradient(140deg,#FFFFFF 0%,#E2EEF9 100%)}
+.plan{background:var(--g-mint)}
+.why2{background:linear-gradient(170deg,#FFFFFF 0%,#F6F3FC 100%)}
+.prompt{background:var(--g-panel)}
+.grid3 .prompt:nth-child(1){background:var(--g-lilac)}
+.grid3 .prompt:nth-child(2){background:var(--g-mint)}
+.grid3 .prompt:nth-child(3){background:var(--g-peach)}
