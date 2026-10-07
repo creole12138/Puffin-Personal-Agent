@@ -343,6 +343,7 @@ function activeView(c) {
     <div class="panel" style="gap:20px">
       <div class="row" style="gap:10px"><span class="tag active">进行中</span>${rem ? `<span class="s12 muted">${esc(rem.w.label)}${rem.w.days > 0 ? ` · 还有 ${rem.w.days} 天` : ""} · ${esc(rem.r.reason)}</span>` : ""}<span style="flex-grow:1"></span>${projectLine(c)}</div>
       <div class="title26">${esc(c.title)}</div>
+      ${trackStrip(c)}
       <div class="grid3" style="gap:20px">
         <div><div class="lbl">进度</div><div class="val">${esc(c.status || "—")}</div></div>
         <div><div class="lbl">等待</div><div class="val">${esc(c.waitingOn || "—")}</div></div>
@@ -362,7 +363,6 @@ function activeView(c) {
     <div class="cta2">
       ${canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
         : `<label class="demo" style="cursor:pointer" data-drop="material">给我一份新材料，我看看会不会改变什么<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label>`}
-      <button class="tl" data-act="timeline">时间线</button>
     </div>
   </div>`;
 }
@@ -395,6 +395,40 @@ function rippleView(c, pc) {
       ${other.map((i) => `<div>· ${esc(s.workCards[i.workCardId]?.title)}：${esc(name(i))}，<span style="color:${i.handling === "auto_updated" ? "var(--green)" : i.handling === "compensate" ? "var(--red)" : "var(--amber)"}">${{ auto_updated: "已自动调整", paused: "等上面决定", needs_user: "需要你决定", compensate: "已发生，已起草更正" }[i.handling]}</span></div>`).join("")}</div>` : ""}
     <div><button class="btn ghost" data-act="show-card">看工作卡</button></div>
   </div>`;
+}
+
+// ---------- 卡片经历（标题下的小时间轴） ----------
+const EV_ICON = {
+  card_created: `<path d="M12 5v14M5 12h14"/>`,
+  decision_made: `<path d="m5 12 5 5 9-10"/>`,
+  plan_confirmed: `<path d="m5 12 5 5 9-10"/>`,
+  external_action_executed: `<path d="M5 12h13M13 6l6 6-6 6"/>`,
+  premise_changed: `<path d="M12 7v6M12 17h.01"/>`,
+  rolled_back: `<path d="M4 10h11a5 5 0 0 1 0 10H9"/><path d="m8 6-4 4 4 4"/>`,
+};
+const evIcon = (t) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${EV_ICON[t] ?? `<circle cx="12" cy="12" r="3"/>`}</svg>`;
+const cardEvents = (s, c) => s.events.filter((e) => e.visibleInTimeline && (e.workCardId === c.id || (e.type === "premise_changed" && c.premiseIds.includes(e.payload.premiseId))));
+const shortDate = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()}`; };
+function trackStrip(c) {
+  const s = st(), evs = cardEvents(s, c); if (!evs.length) return "";
+  const pick = S.tlEvent ? evs.find((e) => e.id === S.tlEvent) : null;
+  const dot = (e) => `<button class="tk ${pick?.id === e.id ? "on" : ""} t-${e.type === "premise_changed" ? "warn" : e.actor === "user" ? "user" : "agent"}" data-act="tk" data-id="${e.id}" aria-label="${esc(e.summary)}">
+      <span class="tk-dot">${evIcon(e.type)}</span><span class="tk-d">${shortDate(e.at)}</span><span class="tk-tip">${esc(e.summary)}</span></button>`;
+  return `<div class="track"><div class="track-row">${evs.map(dot).join("")}<span class="tk now"><span class="tk-dot"></span><span class="tk-d">现在</span></span></div>
+    ${pick ? trackDetail(c, pick) : `<div class="s12 faint">这张卡经历的 ${evs.length} 个关键节点，点一个看看当时的样子</div>`}</div>`;
+}
+function trackDetail(c, e) {
+  const s = st(), snap = e.payload.snapshot, who = { user: "你", agent: "云朵小管家", watcher: "云朵小管家" }[e.actor];
+  const head = `<div class="tkd-h"><span><b>${esc(e.summary)}</b><span class="faint s12"> · ${who} · ${timeAgo(e.at)}</span></span><button class="choice sm" data-act="tk" data-id="${e.id}">收起</button></div>`;
+  if (!snap) return `<div class="tkd">${head}</div>`;
+  const rows = [], curD = decisionMain(c)?.statement, oldD = snap.decisions.find((d) => d.status !== "superseded")?.statement;
+  if (oldD !== curD) rows.push(["关键决策", oldD ?? "—", curD ?? "—"]);
+  snap.premises.forEach((p) => { const now = s.premises[p.id]?.value; if (now && now !== p.value) rows.push([p.label, p.value, now]); });
+  if ((snap.nextStep || "") !== (c.nextStep || "")) rows.push(["下一步", snap.nextStep || "—", c.nextStep || "—"]);
+  const body = rows.length ? `<table class="tkd-t"><tr><th></th><th>那时</th><th>现在</th></tr>${rows.map(([k, a, b]) => `<tr><td>${esc(k)}</td><td>${esc(a)}</td><td><b>${esc(b)}</b></td></tr>`).join("")}</table>`
+    : `<div class="s13 muted">那时的工作状态和现在一样。</div>`;
+  const note = S.rollbackNote && rows.length ? `<div class="amber s13" style="line-height:1.7">回到这时只恢复工作状态，不会撤回已经发生的事${c.actionIds.map((id) => s.actions[id]).filter((a) => a?.external && a.status === "done").map((a) => `；${esc(a.label)}已经发出`).join("")}。之后变化过的条件会重新检查。</div>` : "";
+  return `<div class="tkd">${head}${body}${note}${rows.length ? `<div><button class="btn sm ${S.rollbackNote ? "dark" : ""}" data-act="rollback" data-id="${e.id}">${S.rollbackNote ? "确认回到这时" : "回到这时"}</button></div>` : ""}</div>`;
 }
 
 // ---------- 时间线 ----------
@@ -688,9 +722,10 @@ const actions = {
     if (!reportChanges(r.result.changes, r.result.proposals)) toast("材料收下了，没有改变任何前提");
   }),
   timeline() { S.view = "timeline"; S.tlEvent = null; S.rollbackNote = false; render(); },
+  tk(el) { S.tlEvent = S.tlEvent === el.dataset.id ? null : el.dataset.id; S.rollbackNote = false; render(); },
   "tl-pick"(el) { S.tlEvent = el.dataset.id; S.rollbackNote = false; render(); },
   rollback: (el) => { if (!S.rollbackNote) { S.rollbackNote = true; render(); return; }
-    return withBusy("好，我们回到那时候", async () => { await api(`/events/${el.dataset.id}/rollback`, {}); S.rollbackNote = false; S.view = "card"; S.showCard = false; }); },
+    return withBusy("好，我们回到那时候", async () => { await api(`/events/${el.dataset.id}/rollback`, {}); S.rollbackNote = false; S.tlEvent = null; S.view = "card"; S.showCard = false; }); },
   "confirm-prop": (el) => withBusy("好，按这个来", async () => { await api(`/proposals/${el.dataset.id}/confirm`, {}); S.showCard = false; }),
   unquote() { S.quote = ""; render(); },
   quote() { S.quote = S.quoteBtn?.text ?? ""; S.quoteBtn = null; removeQuoteBtn(); render(); $app.querySelector('[data-keep="chat"]')?.focus(); },
