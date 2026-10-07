@@ -142,7 +142,7 @@ function nav() {
     : `<div class="s12 faint" style="line-height:1.7;padding:4px">${projects.length ? "暂无" : "还没有工作。接住的第一件事会出现在这里，相关的事多了，我会建议归成项目。"}</div>`}
   <button class="newthing" data-act="home">＋ 开启一件新的事</button>
   <div class="sources">
-    <div class="nav-title">已连接的来源</div>
+    <div class="nav-title">已连接</div>
     <div class="src-row"><span>材料 ${mats} 份</span><label class="link" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>
     ${S.folder ? `<div class="grant">项目文件夹「${esc(S.folder.name)}」<div class="row"><span class="faint">网页开着时检查</span><button class="link" data-act="folder-stop">停止</button></div></div>` : ""}
     ${cal ? `<div class="grant">日历${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)} 检查过` : ""}<div class="row"><button class="link" data-act="cal-check">立即检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></div></div>` : ""}
