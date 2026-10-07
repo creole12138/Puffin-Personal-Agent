@@ -163,7 +163,7 @@ function startCards() {
   const c3 = cal ? `<div class="prompt done"><b>连上日历</b><small>已连接，变化帮你盯着</small></div>`
     : S.calOpen ? `<div class="prompt open"><b>连上日历</b><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="cal">
         <div class="row" style="gap:8px"><button class="btn sm mint" data-act="cal">连接</button><button class="choice sm" data-act="cal-open">取消</button></div></div>`
-    : card("cal-open", "连上日历", "贴一个日历链接，变化帮你盯着");
+    : card("cal-open", "连上日历", "贴个日历链接，有变化我来帮你盯着");
   return c1 + c2 + c3;
 }
 function revisit() {
