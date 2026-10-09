@@ -272,7 +272,7 @@ const vfFiles = () => VF_FILES.map(([n]) => latestOf(`${VF}/${n}`)).filter(Boole
 function vfPanel(c) {
   const s = st();
   if (!(c.originEvidenceIds ?? []).some((id) => s.evidence[id]?.ref?.startsWith(`${VF}/`))) return "";
-  return `<div class="panel pad24 vf"><div class="row" style="justify-content:space-between"><div class="lbl">${ICON_FOLDER} 示例项目文件夹（模拟）· 我正在关注</div><span class="s12 faint">改一个文件并保存，看看我会不会发现</span></div>
+  return `<div class="panel pad24 vf"><div class="row" style="justify-content:space-between"><div class="lbl">${ICON_FOLDER} 示例项目文件夹（模拟）· 我正在关注</div><span class="s12 faint">当项目文件信息有变化时，我会提醒你</span></div>
     ${vfFiles().map((e) => { const n = e.ref.slice(VF.length + 1), open = S.vEdit === e.ref;
       return `<div class="vf-f"><button class="out-file" data-act="vf-open" data-ref="${esc(e.ref)}">${ICON_FILE}<span>${esc(n)}</span></button>${e.supersedes ? `<span class="tag ok">刚改过</span>` : ""}</div>
         ${open ? `<div class="vf-ed"><textarea rows="7" data-bind="vText" data-keep="vtext">${esc(S.vText)}</textarea><div class="row" style="gap:8px;justify-content:flex-end"><button class="choice sm" data-act="vf-open" data-ref="${esc(e.ref)}">取消</button><button class="btn sm mint" data-act="vf-save" data-ref="${esc(e.ref)}">保存</button></div></div>` : ""}`; }).join("")}
