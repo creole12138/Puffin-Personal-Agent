@@ -472,3 +472,7 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .vf-f{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line3)}
 .vf-ed{display:flex;flex-direction:column;gap:8px;padding:4px 0 10px}
 .vf-ed textarea{border:1px solid var(--mint);border-radius:10px;padding:10px 12px;font:13px/1.7 ui-monospace,Menlo,monospace;resize:vertical;background:#fff}
+.sin{gap:8px;margin-top:6px}
+.sin>span{font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
+.sin>span::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--mint)}
+.scene-body{gap:16px}
