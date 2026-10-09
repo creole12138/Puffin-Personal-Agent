@@ -6,7 +6,7 @@ const S = {
   busy: null, pending: null, ask: "", chatText: "", attach: [], candAttach: [],
   why: false, editing: null, editVal: "", openDoc: new Set(), projMenu: false, newProj: "",
   demoFlip: false, moreNews: false, moreNext: false, showCard: false,
-  folder: null, calUrl: "", confirmDelete: false, lastSeen: null, more: false, tour: 0, tourDecided: false,
+  sceneIn: {}, scene: null, folder: null, calUrl: "", confirmDelete: false, lastSeen: null, more: false, tour: 0, tourDecided: false,
   quote: "", quoteBtn: null, copied: null,
 };
 const TEXT_EXT = /\.(txt|md|csv|json|tsv|ics|log)$/i;
@@ -73,6 +73,7 @@ function render() {
   const atBottom = scrollMsgs ? scrollMsgs.scrollHeight - scrollMsgs.scrollTop - scrollMsgs.clientHeight < 40 : true;
   $app.innerHTML = S.wsId ? shell() : landing();
   if (S.wsId && S.preview) $app.insertAdjacentHTML("beforeend", previewModal());
+  if (S.wsId && S.scene) $app.insertAdjacentHTML("beforeend", sceneModal());
   if (S.wsId && S.mats) $app.insertAdjacentHTML("beforeend", matsModal());
   if (S.busy) $app.insertAdjacentHTML("beforeend", `<div class="busy"><div class="box2">${AV(44, 39)}<div>${S.busy.split("\n").map((t, i) => `<div class="${i ? "s12 muted" : ""}">${esc(t)}</div>`).join("")}</div><div class="spin"></div></div></div>`);
   if (keep) { const el = $app.querySelector(`[data-keep="${keep}"]`); if (el) { el.focus(); try { el.setSelectionRange(...sel); } catch {} } }
@@ -185,6 +186,103 @@ function matsModal() {
     <div style="padding:8px 20px 16px;overflow:auto">${ev.map((e) => `<div class="li"><div><div>${esc(e.title)}</div><div class="s12 faint">${esc((e.excerpt || "").slice(0, 60))}</div></div><span class="s12 faint" style="white-space:nowrap">${e.at ? timeAgo(e.at) : ""}</span></div>`).join("") || `<div class="s13 muted" style="padding:12px 0">还没有材料。可以在首页把文件拖进输入框，或点「添加」。</div>`}</div></div></div>`;
 }
 
+// ---------- 场景入口 ----------
+const SCENES = {
+  today: {
+    title: "今天最重要的事", short: "根据邮件、会议和项目资料，帮你找到今天的重点", grad: "lilac",
+    sub: "结合邮件、会议纪要、日历和项目资料，告诉你今天先做什么",
+    can: ["找出邮件里真正需要回复或决策的事情", "从会议纪要中识别承诺和待办", "结合日历判断时间紧迫度", "发现长时间没有推进的事项", "给出今天最值得做的 3 件事", "直接准备邮件、会议材料或任务清单"],
+    example: "今天最重要的是确认产品发布页文案。你在周一的会议里答应今天给出反馈，但设计稿还没有收到你的意见。建议先花 20 分钟完成批注。我可以帮你整理需要确认的 4 个问题。",
+    cta: "查看我的今日重点",
+    frame: "【今天最重要的事】请从下面的邮件、会议纪要和项目资料里，找出今天最值得先做的 3 件事（真正要我回复或决定的、我答应过别人的、快到期的、很久没推进的），每件说清楚为什么是今天、先做哪一步、大概要多久，并准备好可以直接用的草稿。",
+    inputs: [
+      { key: "email", ref: "email", label: "邮件", ph: "粘贴最近几封要处理的邮件（带上发件人和主题更准）" },
+      { key: "minutes", ref: "minutes", label: "会议纪要", ph: "粘贴最近的会议纪要或文字稿" },
+    ],
+    sample: {
+      email: "发件人：林夏（设计）\n主题：发布页设计稿 v3，麻烦周五前给意见\n正文：发布页 v3 改了首屏标题和价格区，需要你确认文案方向，周五（10/10）前给到我就能赶上下周一开发。\n\n发件人：王磊（销售）\n主题：客户 A 想提前看演示\n正文：客户 A 希望下周三前看到新版本演示，能否安排 30 分钟？\n\n发件人：HR\n主题：Q4 晋升材料提交提醒\n正文：本月 20 日前提交团队成员的晋升材料。",
+      minutes: "10/6 周一 产品周会\n- 发布页文案：我（你）负责周五前给设计反馈\n- 支付流程改版：张明负责，预计 10/14 提测\n- 客户 A 演示：待定，等销售确认时间\n- 下次周会 10/13",
+    },
+  },
+  release: {
+    title: "持续为你关注项目进展", short: "根据 GitHub PR 和 Issue，及时发现发布风险", grad: "sky",
+    sub: "根据 GitHub PR、Issue 和项目资料，告诉你发布是否按计划进行",
+    can: ["识别哪些 PR 影响本次发布", "跟踪 PR 的创建、审核、合并和 CI 状态", "发现长期没有更新的任务", "结合发布日历判断风险", "整理当前阻塞项和负责人", "自动生成发布周报或同步消息"],
+    example: "距离周五发布还有 3 天，但支付流程 PR 还没有通过审核，相关测试任务也没有更新。建议今天先确认审核人，并安排一次回归测试。要我帮你整理发布风险清单吗？",
+    cta: "关注这个发布",
+    frame: "【持续关注项目进展】请根据下面的发布计划和 GitHub PR / Issue 情况，判断这次发布是否能按计划进行：哪些 PR 影响发布、谁在阻塞、哪些很久没更新、风险有多大、今天应该先推动什么，并准备好可以发给团队的同步消息草稿。",
+    inputs: [
+      { key: "plan", ref: "release", label: "发布计划", ph: "发布日期、范围、负责人，比如：v2.3 周五 10/17 发布，包含支付改版和新首页" },
+      { key: "github", ref: "github", label: "GitHub PR / Issue", ph: "粘贴 PR 和 Issue 列表、状态、评论（以后可以直接连接 GitHub）" },
+    ],
+    sample: {
+      plan: "v2.3 计划 10/17（周五）发布，范围：支付流程改版、新首页、订单导出。发布负责人：你；测试：赵琳。",
+      github: "#412 支付流程改版（张明）— Open，等待 review 4 天，CI 通过，未指定 reviewer\n#418 新首页（陈一）— Merged 10/8\n#421 订单导出（李想）— Open，CI 失败（单测 2 个），最后更新 10/3\nIssue #398 支付回归测试用例 — 赵琳，In progress，最后更新 10/2\nIssue #405 新首页埋点 — Done",
+    },
+  },
+  fitness: {
+    title: "制定我的减脂计划", short: "结合健康数据和日历，安排更可执行的每日计划", grad: "peach",
+    sub: "根据健康数据和日历，帮你安排今天吃什么、动多少、怎么坚持",
+    can: ["读取睡眠、步数、运动等趋势", "结合今天的会议和空闲时间安排运动", "根据你的目标制定每日计划", "发现连续几天没有运动或状态下降", "根据实际完成情况调整下一周计划", "在需要时提醒你，但不进行医疗诊断"],
+    example: "你昨晚睡眠不足，今天有 3 个连续会议。建议把原定的 45 分钟训练改成晚饭后的 20 分钟快走，并把今天的晚餐安排得更简单。要我帮你调整今天的计划吗？",
+    cta: "开始我的减脂计划",
+    frame: "【减脂计划】请根据我的目标、健康数据摘要和今天的日程，安排今天可执行的运动和饮食，以及这一周的节奏。只谈时间、精力和习惯安排，不做任何医疗诊断或用药、热量处方；数据看起来异常时，建议我咨询专业人士。",
+    inputs: [
+      { key: "goal", ref: "goal", label: "你的目标", ph: "比如：3 个月减 5 公斤，每周至少运动 3 次" },
+      { key: "health", ref: "health", label: "健康数据", ph: "粘贴最近几天的睡眠、步数、运动摘要（以后可以直接连接 Apple Health）" },
+      { key: "day", ref: "schedule", label: "今天的安排", ph: "已连接日历会自动读取；没连的话写一下今天的会议和空闲时间" },
+    ],
+    sample: {
+      goal: "3 个月减 5 公斤，每周至少运动 3 次，原计划今晚 19:00 力量训练 45 分钟。",
+      health: "近 5 天：睡眠 7.2h / 6.8h / 6.5h / 5.9h / 5.1h（昨晚）\n步数：8200 / 6100 / 4300 / 3900 / 3100\n运动：周一跑步 30 分钟，之后 4 天没有运动",
+      day: "10:00–12:30 连续 3 个会议；14:00–15:00 评审；18:30 后空闲",
+    },
+  },
+  meeting: {
+    title: "会议之后别让事情丢了", short: "从会议纪要里找出谁要做什么，并帮你跟进", grad: "mint",
+    sub: "从会议纪要里找出谁要做什么，并帮你完成后续跟进",
+    can: ["整理待办清单和负责人", "起草跟进邮件", "设置截止时间提醒", "准备下次会议议程"],
+    example: "周一的周会里有 4 个待办，其中「支付流程提测」和「客户 A 演示时间」还没有负责人确认。我起草了一封跟进邮件，要发给与会者吗？",
+    cta: "整理这次会议",
+    frame: "【会议之后的跟进】请从下面的会议纪要里找出所有承诺和待办（谁、做什么、什么时候），标出没有负责人或没有截止时间的，起草一封跟进邮件，并准备下次会议的议程。",
+    inputs: [{ key: "minutes", ref: "minutes", label: "会议纪要", ph: "粘贴会议纪要或文字稿（飞书妙记、腾讯会议等）" }],
+    sample: { minutes: "10/6 周一 产品周会（参会：你、张明、林夏、王磊、赵琳）\n- 发布页文案：你周五前给设计反馈\n- 支付流程改版：张明负责，预计 10/14 提测\n- 客户 A 演示：时间待定，谁来准备没说\n- 回归测试用例：赵琳更新，没定时间\n- 下次周会 10/13" },
+  },
+};
+function visibleScenes() {
+  const refs = new Set(Object.values(st()?.evidence ?? {}).map((e) => e.ref));
+  const cal = Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt);
+  const used = [];
+  if (refs.has("email") || cal) used.push("today");
+  if (refs.has("github") || refs.has("release")) used.push("release");
+  if (refs.has("health")) used.push("fitness");
+  if (refs.has("minutes")) used.push("meeting");
+  const base = ["today", "release", "fitness"];
+  return used.length ? [...new Set([...used, ...base])].slice(0, 4) : base;
+}
+function sceneCards() {
+  const ids = visibleScenes();
+  return `<div class="scene-h">云朵可以先帮你做这些</div>
+    <div class="scenes n${ids.length}">${ids.map((id) => { const c = SCENES[id];
+      return `<button class="scene g-${c.grad}" data-act="scene" data-id="${id}"><b>${c.title}</b><small>${c.short}</small></button>`; }).join("")}</div>`;
+}
+function sceneModal() {
+  const c = SCENES[S.scene]; if (!c) return "";
+  const v = S.sceneIn;
+  return `<div class="modal-bg" data-act="close-scene"><div class="modal scene-m" role="dialog" aria-label="${c.title}" data-act="noop">
+    <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="choice sm" data-act="close-scene">关闭</button></div>
+    <div class="scene-body">
+      <div class="scene-2">
+        <div><div class="lbl">云朵可以做什么</div><ul class="can">${c.can.map((x) => `<li>${x}</li>`).join("")}</ul></div>
+        <div><div class="lbl">示例输出</div><div class="ex">${AV(28, 24)}<div>${c.example}</div></div></div>
+      </div>
+      <div class="lbl" style="margin-top:4px">给我一些信息</div>
+      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" || i.key === "day" ? 2 : 4}" placeholder="${i.ph}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
+    </div>
+    <div class="scene-f"><button class="btn" data-act="scene-sample">用示例数据试试</button><span style="flex:1"></span><button class="btn mint lg" data-act="scene-go">${c.cta}</button></div>
+  </div></div>`;
+}
+
 // ---------- 首页 ----------
 function startCards() {
   const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt);
@@ -199,34 +297,35 @@ function startCards() {
   return c2 + c3;
 }
 function revisit() {
-  const s = st(), since = S.lastSeen ?? "0";
-  const needs = openChanges();
-  const news = s.events.filter((e) => e.visibleInTimeline && e.actor !== "user" && e.at > since && e.type !== "card_created").slice(-6).reverse();
-  const next = allCards().flatMap((c) => c.reminders.map((r) => ({ r, c }))).filter(({ r }) => { const w = when(r.at); return typeof w !== "string" && w.days >= 0; })
-    .sort((a, b) => String(a.r.at).localeCompare(String(b.r.at)));
+  const s = st(), since = S.lastSeen ?? "0", DAY = 864e5, nowT = Date.now();
+  const title = (id) => { const c = s.workCards[id]; return c ? `${c.projectId ? `${esc(s.projects[c.projectId]?.name)} · ` : ""}${esc(c.title)}` : ""; };
+  const items = [];
+  openChanges().forEach((pc) => { const p = s.premises[pc.premiseId], i = pc.impacts.find((x) => x.handling === "needs_user"), d = s.decisions[i.id];
+    items.push({ k: "decide", id: i.workCardId, t: `${p?.label}变成 ${pc.to}，「${d?.statement}」${d?.status === "invalidated" ? "不再成立" : "需要再看看"}` }); });
+  Object.values(s.proposals ?? {}).filter((p) => p.status === "pending" && p.workCardId && !items.some((x) => x.id === p.workCardId))
+    .forEach((p) => items.push({ k: "decide", id: p.workCardId, t: `${p.change?.label ?? "一个条件"}可能变了，等你确认` }));
+  s.events.filter((e) => e.visibleInTimeline && e.actor !== "user" && e.at > since && e.type !== "card_created" && e.workCardId).slice(-4).reverse()
+    .forEach((e) => items.push({ k: "news", id: e.workCardId, t: e.summary }));
+  allCards().filter((c) => c.stage === "active" && !needsYou(c)).forEach((c) => {
+    const idle = Math.floor((nowT - new Date(c.updatedAt).getTime()) / DAY);
+    const waiting = (c.openQuestions ?? []).filter((q) => !q.answer);
+    if (idle >= 3) items.push({ k: "stuck", id: c.id, t: `${idle} 天没有进展${c.nextStep ? `，下一步还是「${c.nextStep}」` : ""}` });
+    else if (waiting.length) items.push({ k: "stuck", id: c.id, t: `还在等你回答：${waiting[0].question}` });
+  });
+  allCards().flatMap((c) => c.reminders.map((r) => ({ r, c }))).map(({ r, c }) => ({ w: when(r.at), r, c }))
+    .filter(({ w }) => typeof w !== "string" && w.days >= 0 && w.days <= 7).sort((x, y) => x.w.days - y.w.days).slice(0, 3)
+    .forEach(({ w, r, c }) => items.push({ k: "next", id: c.id, t: `${w.label}${w.days > 0 ? `（还有 ${w.days} 天）` : ""}：${r.reason || "提醒"}` }));
+  const K = { decide: ["要你决定", "warn"], news: ["新进展", "ok"], stuck: ["可能卡住了", "stuck"], next: ["快到了", "info"] };
+  const order = ["decide", "stuck", "next", "news"], list = items.sort((x, y) => order.indexOf(x.k) - order.indexOf(y.k));
   const hour = new Date().getHours(), hi = hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
-  const n = needs.length + news.length;
-  const cardTitle = (id) => { const c = s.workCards[id]; return c ? `${c.projectId ? `${esc(s.projects[c.projectId]?.name)} · ` : ""}${esc(c.title)}` : ""; };
-  return `<div style="display:flex;flex-direction:column;gap:10px">
-    <div class="greet">${hi} · ${S.lastSeen && n ? `自你上次离开，有 ${n} 件事有变化` : "这是你手上的事"}</div>
-    <div class="grid3">
-      <div class="box" style="border-color:${needs.length ? "var(--amber-line)" : "var(--line)"};gap:8px">
-        <div class="s12" style="color:var(--amber);font-weight:500">需要你决定 · ${needs.length}</div>
-        ${needs.slice(0, 2).map((pc) => { const p = s.premises[pc.premiseId], i = pc.impacts.find((x) => x.handling === "needs_user"), d = s.decisions[i.id];
-          return `<div class="s11 muted">${cardTitle(i.workCardId)}</div><div style="line-height:1.6">${esc(p?.label)}变成 ${esc(pc.to)}，「${esc(d?.statement)}」${d?.status === "invalidated" ? "不再成立" : "需要再看看"}</div>
-          <button class="btn mint" style="align-self:flex-start;padding:6px 12px;min-height:0;font-size:12px" data-act="open" data-id="${i.workCardId}">去处理</button>`; }).join("") || `<div class="s13 faint">没有</div>`}
-      </div>
-      <div class="box">
-        <div class="s12" style="color:var(--green);font-weight:500">有新进展 · ${news.length}</div>
-        ${(S.moreNews ? news : news.slice(0, 2)).map((e) => `<div><div class="s11 muted">${cardTitle(e.workCardId) || timeAgo(e.at)}</div><div style="line-height:1.6">${esc(e.summary)}</div></div>`).join("") || `<div class="s13 faint">没有</div>`}
-        ${news.length > 2 ? `<button class="link" style="align-self:flex-start" data-act="more-news">${S.moreNews ? "收起" : `还有 ${news.length - 2} 条`}</button>` : ""}
-      </div>
-      <div class="box">
-        <div class="s12" style="color:var(--blue);font-weight:500">接下来</div>
-        ${(S.moreNext ? next : next.slice(0, 2)).map(({ r, c }) => { const w = when(r.at); return `<div><div class="s11 muted">${esc(w.label)}${w.days > 0 ? ` · 还有 ${w.days} 天` : ""}</div><div style="line-height:1.6">${esc(c.title)}</div></div>`; }).join("") || `<div class="s13 faint">没有排期</div>`}
-        ${next.length > 2 ? `<button class="link" style="align-self:flex-start" data-act="more-next">${S.moreNext ? "收起" : `还有 ${next.length - 2} 件`}</button>` : ""}
-      </div>
-    </div></div>`;
+  const shown = S.moreNews ? list : list.slice(0, 5);
+  return `<section class="alerts">
+    <div class="alerts-h"><b>${hi}，这是我替你盯着的</b><span class="faint s12">${list.length ? `${list.length} 条提醒` : ""}</span></div>
+    ${shown.map((x) => `<button class="al" data-act="open" data-id="${x.id}"><span class="tag al-${K[x.k][1]}">${K[x.k][0]}</span>
+      <span class="al-t"><span class="al-c">${title(x.id)}</span><span>${esc(x.t)}</span></span><span class="al-go">查看 ›</span></button>`).join("")
+      || `<div class="s13 muted" style="padding:6px 2px">一切按计划进行，暂时没有要你操心的。</div>`}
+    ${list.length > 5 ? `<button class="link" style="align-self:flex-start" data-act="more-news">${S.moreNews ? "收起" : `还有 ${list.length - 5} 条`}</button>` : ""}
+  </section>`;
 }
 
 function home() {
@@ -235,7 +334,7 @@ function home() {
   return `<div class="wrap home-wrap">
     ${first ? "" : revisit()}
     <div class="hero">${AV(84, 74)}<div class="h" style="font-size:${first ? 30 : 24}px">${title}</div></div>
-    <div class="grid2 start">${startCards()}</div>
+    ${sceneCards()}
     <div class="composer" data-drop="attach">
       <textarea rows="3" aria-label="说一件事" placeholder="说一件放不下的事，比如：和 Alex 还有一些工作一直没对齐&#10;也可以把相关文件拖进来" data-bind="ask" data-keep="ask">${esc(S.ask)}</textarea>
       <div class="composer-f">
@@ -748,6 +847,22 @@ const actions = {
   replan: (el) => withBusy("我换个思路再拟一版", () => api(`/cards/${el.dataset.id}/plan`, {})),
   run: (el) => withBusy("我开始动手了：读材料、起草、排提醒\n可能要一两分钟，做完会在右边告诉你", async () => { await api(`/cards/${el.dataset.id}/run`, {}); }),
   why() { S.why = !S.why; render(); },
+  scene(el) { S.scene = el.dataset.id; S.sceneIn = {}; render(); },
+  "close-scene"() { S.scene = null; render(); },
+  "scene-sample"() { S.sceneIn = { ...SCENES[S.scene].sample }; render(); },
+  "scene-go"() {
+    const c = SCENES[S.scene], v = S.sceneIn;
+    const filled = c.inputs.filter((i) => (v[i.key] ?? "").trim());
+    if (!filled.length) return toast("给我一点信息，或者先用示例数据试试", true);
+    const sid = S.scene; S.scene = null;
+    return withBusy("我在看你给的信息，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
+      const r = await api("/candidates", { text: `${c.title}\n${c.frame}` });
+      const cid = r.result.id, ids = [];
+      for (const i of filled) { const m = await api("/materials", { title: `${i.label}（${c.title}）`, text: v[i.key], ref: i.ref }); ids.push(m.result.evidence.id); }
+      const d = await api(`/cards/${cid}/draft`, { evidenceIds: ids });
+      openCard(d.result.id); S.sceneIn = {};
+    });
+  },
   "nav-cal"() { S.navCal = !S.navCal; render(); if (S.navCal) $app.querySelector('[data-keep="navcal"]')?.focus(); },
   soon(el) { toast(`${el.dataset.v} 还在示意阶段，下一版接入`); },
   "open-mats"() { S.more = false; S.mats = true; render(); },
@@ -812,9 +927,9 @@ document.addEventListener("click", async (e) => {
   e.preventDefault();
   try { await fn(el); } catch (err) { toast(err.message, true); }
 });
-document.addEventListener("input", (e) => { const k = e.target.dataset?.bind; if (k) S[k] = e.target.value; });
+document.addEventListener("input", (e) => { const k = e.target.dataset?.bind; if (k) S[k] = e.target.value; const sk = e.target.dataset?.scene; if (sk) S.sceneIn[sk] = e.target.value; });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && (S.preview || S.mats || S.navCal)) { S.preview = null; S.mats = false; S.navCal = false; render(); return; }
+  if (e.key === "Escape" && (S.preview || S.mats || S.navCal || S.scene)) { S.preview = null; S.mats = false; S.navCal = false; S.scene = null; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
