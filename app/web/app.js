@@ -196,8 +196,8 @@ const SCENES = {
     cta: "查看我的今日重点",
     frame: "【今天最重要的事】请从下面的邮件、会议纪要和项目资料里，找出今天最值得先做的 3 件事（真正要我回复或决定的、我答应过别人的、快到期的、很久没推进的），每件说清楚为什么是今天、先做哪一步、大概要多久，并准备好可以直接用的草稿。",
     inputs: [
-      { key: "email", ref: "email", label: "邮件", ph: "粘贴最近几封要处理的邮件（带上发件人和主题更准）" },
-      { key: "minutes", ref: "minutes", label: "会议纪要", ph: "粘贴最近的会议纪要或文字稿" },
+      { key: "email", ref: "email", label: "邮件", ph: "暂不支持直接连接邮箱，先把要处理的邮件粘贴到这里（带上发件人和主题更准）" },
+      { key: "minutes", ref: "minutes", label: "会议纪要", ph: "暂不支持直接连接会议软件，先把会议纪要或文字稿粘贴到这里" },
     ],
     sample: {
       email: "发件人：林夏（设计）\n主题：发布页设计稿 v3，麻烦周五前给意见\n正文：发布页 v3 改了首屏标题和价格区，需要你确认文案方向，周五（10/10）前给到我就能赶上下周一开发。\n\n发件人：王磊（销售）\n主题：客户 A 想提前看演示\n正文：客户 A 希望下周三前看到新版本演示，能否安排 30 分钟？\n\n发件人：HR\n主题：Q4 晋升材料提交提醒\n正文：本月 20 日前提交团队成员的晋升材料。",
@@ -213,7 +213,7 @@ const SCENES = {
     frame: "【持续关注项目进展】请根据下面的发布计划和 GitHub PR / Issue 情况，判断这次发布是否能按计划进行：哪些 PR 影响发布、谁在阻塞、哪些很久没更新、风险有多大、今天应该先推动什么，并准备好可以发给团队的同步消息草稿。",
     inputs: [
       { key: "plan", ref: "release", label: "发布计划", ph: "发布日期、范围、负责人，比如：v2.3 周五 10/17 发布，包含支付改版和新首页" },
-      { key: "github", ref: "github", label: "GitHub PR / Issue", ph: "粘贴 PR 和 Issue 列表、状态、评论（以后可以直接连接 GitHub）" },
+      { key: "github", ref: "github", label: "GitHub PR / Issue", ph: "暂不支持直接连接 GitHub，先把 PR 和 Issue 的列表、状态、评论粘贴到这里" },
     ],
     sample: {
       plan: "v2.3 计划 10/17（周五）发布，范围：支付流程改版、新首页、订单导出。发布负责人：你；测试：赵琳。",
@@ -229,8 +229,8 @@ const SCENES = {
     frame: "【减脂计划】请根据我的目标、健康数据摘要和今天的日程，安排今天可执行的运动和饮食，以及这一周的节奏。只谈时间、精力和习惯安排，不做任何医疗诊断或用药、热量处方；数据看起来异常时，建议我咨询专业人士。",
     inputs: [
       { key: "goal", ref: "goal", label: "你的目标", ph: "比如：3 个月减 5 公斤，每周至少运动 3 次" },
-      { key: "health", ref: "health", label: "健康数据", ph: "粘贴最近几天的睡眠、步数、运动摘要（以后可以直接连接 Apple Health）" },
-      { key: "day", ref: "schedule", label: "今天的安排", ph: "已连接日历会自动读取；没连的话写一下今天的会议和空闲时间" },
+      { key: "health", ref: "health", label: "健康数据", ph: "暂不支持直接连接 Apple Health，先把最近几天的睡眠、步数、运动摘要粘贴到这里" },
+      { key: "day", ref: "schedule", label: "今天的安排", ph: "暂不支持自动读取日历，先写一下今天的会议和空闲时间" },
     ],
     sample: {
       goal: "3 个月减 5 公斤，每周至少运动 3 次，原计划今晚 19:00 力量训练 45 分钟。",
@@ -245,7 +245,7 @@ const SCENES = {
     example: "周一的周会里有 4 个待办，其中「支付流程提测」和「客户 A 演示时间」还没有负责人确认。我起草了一封跟进邮件，要发给与会者吗？",
     cta: "整理这次会议",
     frame: "【会议之后的跟进】请从下面的会议纪要里找出所有承诺和待办（谁、做什么、什么时候），标出没有负责人或没有截止时间的，起草一封跟进邮件，并准备下次会议的议程。",
-    inputs: [{ key: "minutes", ref: "minutes", label: "会议纪要", ph: "粘贴会议纪要或文字稿（飞书妙记、腾讯会议等）" }],
+    inputs: [{ key: "minutes", ref: "minutes", label: "会议纪要", ph: "暂不支持直接连接会议软件，先把会议纪要或文字稿（飞书妙记、腾讯会议等）粘贴到这里" }],
     sample: { minutes: "10/6 周一 产品周会（参会：你、张明、林夏、王磊、赵琳）\n- 发布页文案：你周五前给设计反馈\n- 支付流程改版：张明负责，预计 10/14 提测\n- 客户 A 演示：时间待定，谁来准备没说\n- 回归测试用例：赵琳更新，没定时间\n- 下次周会 10/13" },
   },
 };
@@ -271,12 +271,7 @@ function sceneModal() {
   const v = S.sceneIn;
   return `<div class="modal-bg" data-act="close-scene"><div class="modal scene-m" role="dialog" aria-label="${c.title}" data-act="noop">
     <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="choice sm" data-act="close-scene">关闭</button></div>
-    <div class="scene-body">
-      <div class="scene-2">
-        <div><div class="lbl">云朵可以做什么</div><ul class="can">${c.can.map((x) => `<li>${x}</li>`).join("")}</ul></div>
-        <div><div class="lbl">示例输出</div><div class="ex">${AV(28, 24)}<div>${c.example}</div></div></div>
-      </div>
-      <div class="lbl" style="margin-top:4px">给我一些信息</div>
+    <div class="scene-body" style="padding-top:20px">
       ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" || i.key === "day" ? 2 : 4}" placeholder="${i.ph}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
     </div>
     <div class="scene-f"><button class="btn" data-act="scene-sample">用示例数据试试</button><span style="flex:1"></span><button class="btn mint lg" data-act="scene-go">${c.cta}</button></div>
