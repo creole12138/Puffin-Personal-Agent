@@ -428,7 +428,8 @@ function draftView(c) {
       <div><div class="lbl" style="margin-bottom:4px">依赖的条件</div>${conditionsList(c.premiseIds.map((id) => s.premises[id]).filter(Boolean))}</div>${decisionsBlock(c)}</div></details>
     <div class="row"><button class="btn mint lg" data-act="plan" data-id="${c.id}" ${c.plan?.status === "proposed" ? "disabled" : ""}>${c.plan?.status === "proposed" ? "计划已生成，在右边确认" : "生成执行计划"}</button>
       <span class="s12 muted">${c.plan?.status === "proposed" ? "" : unanswered ? `还有 ${unanswered} 处没确认，也可以先生成` : "确认无误，可以生成计划了"}</span></div>
-  </div>`;
+  </div>
+  ${vfPanel(c) ? `<div style="max-width:720px;margin:16px auto 0">${vfPanel(c)}</div>` : ""}`;
 }
 
 const ICON_CHEV_DOWN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
