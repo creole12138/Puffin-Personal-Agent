@@ -9,7 +9,18 @@ const S = {
   sceneIn: {}, scene: null, vEdit: null, vText: "", folder: null, calUrl: "", confirmDelete: false, lastSeen: null, more: false, tour: 0, tourDecided: false,
   quote: "", quoteBtn: null, copied: null,
 };
-const TEXT_EXT = /\.(txt|md|csv|json|tsv|ics|log)$/i;
+const TEXT_EXT = /\.(txt|md|csv|json|tsv|ics|log|rtf)$/i;
+/** RTF → 纯文本（够用的简化版：处理转义、Unicode、去掉控制字和分组） */
+function rtfToText(r) {
+  if (!/^\s*\{\\rtf/.test(r)) return r;
+  r = r.replace(/\{\\\*[^{}]*(\{[^{}]*\}[^{}]*)*\}/g, "").replace(/\{\\(fonttbl|colortbl|stylesheet|info|expandedcolortbl)(?:[^{}]|\{[^{}]*\})*\}/g, "");
+  r = r.replace(/\\u(-?\d+)\??/g, (_, n) => String.fromCharCode(n < 0 ? Number(n) + 65536 : Number(n)));
+  r = r.replace(/\\'([0-9a-f]{2})/gi, (_, h) => "\u0000" + h);
+  r = r.replace(/\\(par|line)\b ?/g, "\n").replace(/\\tab\b ?/g, "\t").replace(/\\[a-z]+-?\d* ?/gi, "").replace(/\\([{}\\])/g, "$1").replace(/[{}]/g, "");
+  r = r.replace(/(\u0000[0-9a-f]{2})+/gi, (m) => { try { return new TextDecoder("gbk").decode(new Uint8Array(m.split("\u0000").filter(Boolean).map((h) => parseInt(h, 16)))); } catch { return ""; } });
+  return r.replace(/\n{3,}/g, "\n\n").trim();
+}
+const readText = async (f) => /\.rtf$/i.test(f.name) ? rtfToText(await f.text()) : f.text();
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const st = () => S.ws?.state;
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
@@ -183,7 +194,7 @@ function matsModal() {
   const ev = Object.values(st().evidence).filter((e) => !["chat", "edit"].includes(e.ref));
   return `<div class="modal-bg" data-act="close-mats"><div class="modal" role="dialog" aria-label="全部材料" data-act="noop">
     <div class="modal-h">${ICON_FILE}<b>全部材料 · ${ev.length} 份</b><span style="flex:1"></span>
-      <label class="btn sm mint" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label><button class="choice sm" data-act="close-mats">关闭</button></div>
+      <label class="btn sm mint" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics,.rtf" data-change="material-files" hidden></label><button class="choice sm" data-act="close-mats">关闭</button></div>
     <div style="padding:8px 20px 16px;overflow:auto">${ev.map((e) => `<div class="li"><div><div>${esc(e.title)}</div><div class="s12 faint">${esc((e.excerpt || "").slice(0, 60))}</div></div><span class="s12 faint" style="white-space:nowrap">${e.at ? timeAgo(e.at) : ""}</span></div>`).join("") || `<div class="s13 muted" style="padding:12px 0">还没有材料。可以在首页把文件拖进输入框，或点「添加」。</div>`}</div></div></div>`;
 }
 
@@ -406,7 +417,7 @@ function candidateView(c) {
       : ps.length ? `<div style="border-top:1px solid var(--line3);padding-top:14px">${projectLine(c)}</div>` : ""}
     </div>
     ${S.candAttach.length ? `<div class="chips">${S.candAttach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="uncand" data-i="${i}">×</button></span>`).join("")}</div>` : ""}
-    <label class="dropzone" data-drop="cand" style="cursor:pointer">拖入相关的聊天记录、纪要或表格，我能补全更多<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="cand" hidden></label>
+    <label class="dropzone" data-drop="cand" style="cursor:pointer">拖入相关的聊天记录、纪要或表格，我能补全更多<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics,.rtf" data-change="cand" hidden></label>
   </div>`;
 }
 
@@ -525,7 +536,7 @@ function activeView(c) {
     <div class="cta2">
       ${canSim ? `<button class="demo play" data-act="sim-pr"><img src="/play.svg" alt="" width="40" height="40"><span><b>模拟一次变化：Git 仓库中 #412 支付流程 PR 合并了</b><small>看看我会怎么发现变化、调整风险判断</small></span></button>`
         : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
-        : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么<small class="faint" style="display:block;font-size:12px;margin-top:2px">支持 txt、md、csv、json、ics 文件</small></span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>`}
+        : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么<small class="faint" style="display:block;font-size:12px;margin-top:2px">支持 txt、md、rtf、csv、json、ics 文件</small></span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics,.rtf" data-change="material-files" hidden></label></div>`}
     </div>
   </div>`;
 }
@@ -778,9 +789,9 @@ function proposalBlock(id) {
 async function readFiles(files) {
   const out = [];
   for (const f of files) {
-    if (!TEXT_EXT.test(f.name)) { toast(`暂不支持 ${f.name}，请用 txt / md / csv / json`, true); continue; }
+    if (!TEXT_EXT.test(f.name)) { toast(`暂不支持 ${f.name}，请用 txt / md / rtf / csv / json`, true); continue; }
     if (f.size > 1_000_000) { toast(`${f.name} 太大（上限 1MB）`, true); continue; }
-    out.push({ title: f.name, text: await f.text() });
+    out.push({ title: f.name, text: await readText(f) });
   }
   return out;
 }
@@ -819,7 +830,7 @@ async function scanFolder() {
     if (prev && prev.lm === file.lastModified && prev.size === file.size) continue;
     if (file.size > 1_000_000 || ++n > 20) continue;
     const sib = prev ?? Object.entries(F.files).filter(([k]) => k !== entry.name && stem(k) === stem(entry.name)).map(([, v]) => v).pop();
-    const r = await api("/materials", { title: entry.name, text: await file.text(), source: "local_folder", ref: `${F.name}/${entry.name}`, supersedes: sib?.evidenceId });
+    const r = await api("/materials", { title: entry.name, text: await readText(file), source: "local_folder", ref: `${F.name}/${entry.name}`, supersedes: sib?.evidenceId });
     F.files[entry.name] = { lm: file.lastModified, size: file.size, evidenceId: r.result.evidence.id };
     reportChanges(r.result.changes, r.result.proposals);
   }
