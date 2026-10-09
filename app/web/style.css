@@ -467,3 +467,8 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .sfold b{font-size:15px}
 .sor{text-align:center;font-size:12px;color:var(--ink4);display:flex;align-items:center;gap:10px}
 .sor::before,.sor::after{content:"";flex:1;border-top:1px solid var(--line)}
+
+.vf .lbl{display:flex;align-items:center;gap:6px}
+.vf-f{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line3)}
+.vf-ed{display:flex;flex-direction:column;gap:8px;padding:4px 0 10px}
+.vf-ed textarea{border:1px solid var(--mint);border-radius:10px;padding:10px 12px;font:13px/1.7 ui-monospace,Menlo,monospace;resize:vertical;background:#fff}

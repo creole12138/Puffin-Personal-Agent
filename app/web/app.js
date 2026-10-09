@@ -6,7 +6,7 @@ const S = {
   busy: null, pending: null, ask: "", chatText: "", attach: [], candAttach: [],
   why: false, editing: null, editVal: "", openDoc: new Set(), projMenu: false, newProj: "",
   demoFlip: false, moreNews: false, moreNext: false, showCard: false,
-  sceneIn: {}, scene: null, folder: null, calUrl: "", confirmDelete: false, lastSeen: null, more: false, tour: 0, tourDecided: false,
+  sceneIn: {}, scene: null, vEdit: null, vText: "", folder: null, calUrl: "", confirmDelete: false, lastSeen: null, more: false, tour: 0, tourDecided: false,
   quote: "", quoteBtn: null, copied: null,
 };
 const TEXT_EXT = /\.(txt|md|csv|json|tsv|ics|log)$/i;
@@ -175,7 +175,8 @@ function connectors(grants, cal) {
       + (S.navCal ? `<div class="cn-cal"><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="navcal"><button class="btn sm mint" data-act="cal">连接</button></div>` : "");
   const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
     .map(([k, n]) => row(k, n, "", `<button class="cn-soon" data-act="soon" data-v="${n}">即将支持</button>`, "off")).join("");
-  return folder + calRow + `<div class="cn-sep">示意 · 即将支持</div>` + soon;
+  const vf = Object.values(st().evidence).some((e) => e.ref?.startsWith(`${VF}/`)) ? row("folder", "示例项目文件夹（模拟）", "正在关注 · 3 个文件", "", "on") : "";
+  return folder + vf + calRow + `<div class="cn-sep">示意 · 即将支持</div>` + soon;
 }
 function matsModal() {
   if (!S.mats) return "";
@@ -249,6 +250,23 @@ const SCENES = {
     sample: { minutes: "10/6 周一 产品周会（参会：你、张明、林夏、王磊、赵琳）\n- 发布页文案：你周五前给设计反馈\n- 支付流程改版：张明负责，预计 10/14 提测\n- 客户 A 演示：时间待定，谁来准备没说\n- 回归测试用例：赵琳更新，没定时间\n- 下次周会 10/13" },
   },
 };
+const VF = "示例项目";
+const VF_FILES = [
+  ["发布计划.md", "# v2.3 发布计划\n发布日期：10/17（周五）\n范围：支付流程改版、新首页、订单导出\n发布负责人：你\n测试负责人：赵琳\n上线前需要：全部 PR 合并、回归测试通过、客服话术更新"],
+  ["PR 状态.md", "# PR 状态（从 GitHub 同步）\n#412 支付流程改版（张明）— Open，等待 review 4 天，CI 通过，未指定 reviewer\n#418 新首页（陈一）— Merged 10/8\n#421 订单导出（李想）— Open，CI 失败（单测 2 个），最后更新 10/3"],
+  ["测试进度.md", "# 测试进度\n支付回归测试用例（赵琳）：进行中，完成 40%，最后更新 10/2\n新首页埋点验证：已完成\n订单导出：等 #421 修复后再测"],
+];
+const latestOf = (ref) => { const s = st(), list = Object.values(s.evidence).filter((e) => e.ref === ref); return list.find((e) => !list.some((x) => x.supersedes === e.id)); };
+const vfFiles = () => VF_FILES.map(([n]) => latestOf(`${VF}/${n}`)).filter(Boolean);
+function vfPanel(c) {
+  const s = st();
+  if (!(c.originEvidenceIds ?? []).some((id) => s.evidence[id]?.ref?.startsWith(`${VF}/`))) return "";
+  return `<div class="panel pad24 vf"><div class="row" style="justify-content:space-between"><div class="lbl">${ICON_FOLDER} 示例项目文件夹（模拟）· 我正在关注</div><span class="s12 faint">改一个文件并保存，看看我会不会发现</span></div>
+    ${vfFiles().map((e) => { const n = e.ref.slice(VF.length + 1), open = S.vEdit === e.ref;
+      return `<div class="vf-f"><button class="out-file" data-act="vf-open" data-ref="${esc(e.ref)}">${ICON_FILE}<span>${esc(n)}</span></button>${e.supersedes ? `<span class="tag ok">刚改过</span>` : ""}</div>
+        ${open ? `<div class="vf-ed"><textarea rows="7" data-bind="vText" data-keep="vtext">${esc(S.vText)}</textarea><div class="row" style="gap:8px;justify-content:flex-end"><button class="choice sm" data-act="vf-open" data-ref="${esc(e.ref)}">取消</button><button class="btn sm mint" data-act="vf-save" data-ref="${esc(e.ref)}">保存</button></div></div>` : ""}`; }).join("")}
+  </div>`;
+}
 function visibleScenes() {
   const refs = new Set(Object.values(st()?.evidence ?? {}).map((e) => e.ref));
   const cal = Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt);
@@ -273,7 +291,7 @@ function sceneModal() {
     <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="choice sm" data-act="close-scene">关闭</button></div>
     <div class="scene-body" style="padding-top:20px">
       ${S.scene === "release" ? `<div class="sfold">${cIcon("folder")}<div style="flex:1"><b>接管项目文件夹（推荐）</b><div class="s13" style="color:var(--ink2);margin-top:2px">选一个项目目录，我先读一遍理出进展；之后里面的文件有变动，我会自动判断牵动了什么并提醒你（网页开着时检查）</div></div>
-        ${"showDirectoryPicker" in window ? `<button class="btn mint" data-act="scene-folder">选择文件夹</button>` : `<span class="s12 faint">需要 Chrome 或 Edge</span>`}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">${"showDirectoryPicker" in window ? `<button class="btn mint" data-act="scene-folder">选择文件夹</button>` : `<span class="s12 faint">需要 Chrome 或 Edge</span>`}<button class="btn" data-act="scene-vfolder">用示例项目文件夹试试</button></div></div>
         <div class="sor">或者先粘贴</div>` : ""}
       ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.ph.startsWith("暂不支持") ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
     </div>
@@ -476,8 +494,9 @@ function activeView(c) {
   const others = all.filter((p) => !prem.includes(p));
   const attention = all.filter((p) => p.inferred || !p.confirmed);
   const canDemo = c.id === "wc_alex" && s.premises.pr_budget?.value === "50 万";
-  const ghEv = (c.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => e?.ref === "github" && /#412/.test(e.excerpt));
-  const canSim = ghEv && !/#412[^\n]*Merged/.test(ghEv.excerpt) && !Object.values(s.evidence).some((e) => e.supersedes === ghEv.id);
+  const ghEv0 = (c.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => (e?.ref === "github" || e?.ref === `${VF}/PR 状态.md`) && /#412/.test(e.excerpt));
+  const ghEv = ghEv0 && latestOf(ghEv0.ref);
+  const canSim = ghEv && !/#412[^\n]*Merged/.test(ghEv.excerpt);
   return `<div style="display:flex;flex-direction:column;gap:16px">
     ${changesFor(c.id).length ? `<div class="amber row" style="justify-content:space-between"><span>有一处前提变化需要你决定</span><button class="btn" data-act="show-ripple">去处理</button></div>` : ""}
     ${Object.values(st().proposals ?? {}).some((p) => p.workCardId === c.id && p.status === "pending") ? `<div class="amber">有一处变化在右边等你确认</div>` : ""}
@@ -501,6 +520,7 @@ function activeView(c) {
       ${c.nextStep ? `<div><div class="lbl">下一步</div><div class="val">${esc(c.nextStep)}</div></div>` : ""}
     </div>
     <div class="panel pad24">${actionsBlock(c)}</div>
+    ${vfPanel(c)}
     <div class="cta2">
       ${canSim ? `<button class="demo play" data-act="sim-pr"><img src="/play.svg" alt="" width="40" height="40"><span><b>模拟一次变化：Git 仓库中 #412 支付流程 PR 合并了</b><small>看看我会怎么发现变化、调整风险判断</small></span></button>`
         : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
@@ -861,12 +881,30 @@ const actions = {
       openCard(d.result.id);
     });
   },
+  "scene-vfolder"() {
+    const c = SCENES.release; S.scene = null;
+    return withBusy("我在读示例项目文件夹，把项目进展理一理\n要一小会儿，可以先喝口水", async () => {
+      const ids = [];
+      for (const [n, t] of VF_FILES) { const m = await api("/materials", { title: n, text: t, source: "local_folder", ref: `${VF}/${n}` }); ids.push(m.result.evidence.id); }
+      const r = await api("/candidates", { text: `${c.title}：v2.3 发布`, brief: c.frame });
+      const d = await api(`/cards/${r.result.id}/draft`, { evidenceIds: ids });
+      openCard(d.result.id);
+    });
+  },
+  "vf-open"(el) { const ref = el.dataset.ref; if (S.vEdit === ref) { S.vEdit = null; } else { S.vEdit = ref; S.vText = latestOf(ref)?.excerpt ?? ""; } render(); },
+  "vf-save": (el) => withBusy("文件夹里有文件变了，我看看", async () => {
+    const old = latestOf(el.dataset.ref); if (!old) return;
+    if (S.vText.trim() === old.excerpt.trim()) { S.vEdit = null; return toast("内容没有变化"); }
+    const r = await api("/materials", { title: el.dataset.ref.slice(VF.length + 1), text: S.vText, source: "local_folder", ref: old.ref, supersedes: old.id });
+    S.vEdit = null;
+    if (!reportChanges(r.result.changes, r.result.proposals)) toast("看过了，这次改动没有改变卡上的判断");
+  }),
   "sim-pr": () => withBusy("Git 仓库里有新动静，我看看", async () => {
     const s = st(), c = s.workCards[S.sel];
-    const old = (c?.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => e?.ref === "github" && /#412/.test(e.excerpt));
-    if (!old) return;
+    const o0 = (c?.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => (e?.ref === "github" || e?.ref === `${VF}/PR 状态.md`) && /#412/.test(e.excerpt));
+    const old = o0 && latestOf(o0.ref); if (!old) return;
     const text = old.excerpt.replace(/#412[^\n]*/, "#412 支付流程改版（张明）— Merged 10/10，reviewer 王磊已通过，CI 通过");
-    const r = await api("/materials", { title: "GitHub PR / Issue（更新）", text, source: "local_folder", ref: "github", supersedes: old.id });
+    const r = await api("/materials", { title: old.ref.startsWith(VF) ? "PR 状态.md" : "GitHub PR / Issue（更新）", text, source: "local_folder", ref: old.ref, supersedes: old.id });
     if (!reportChanges(r.result.changes, r.result.proposals)) toast("看过了，这次变化没有改变卡上的判断");
   }),
   "scene-sample"() { S.sceneIn = { ...SCENES[S.scene].sample }; return actions["scene-go"](); },
