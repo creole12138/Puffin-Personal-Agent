@@ -172,7 +172,7 @@ const SYSTEM = `把用户的一件事整理成"工作卡"，让用户随时知�
    - 前提是"会变、一变就影响决策"的事实：截止时间、预算、人手、进度、别人的立场等。值写成简短具体的取值（如「周五」），不要写成描述；拿不准的写最可能的值、confirmed=false，并在 openQuestions 里问，用 premiseKey 关联。只是背景信息、变了也不影响任何决定的，不要放进前提。
    - 至少给出 1 条决策：用户已经做出或正在倾向的做法（如「先做最小可运行版本，再补文档」）。材料里没有明说的，可以根据目标和前提提出一个合理的倾向，confidence=low。每条决策写清依赖哪些前提。
    - 动作是能做出具体产出的事，写清依赖哪个决策；会对外生效的 external=true。不要把"确认/询问某事"写成动作，那些属于 openQuestions。
-   - 拿不准的点放进 openQuestions，最多 3 个，只问会影响判断的事。问题一句话、口语化；每个给 2–4 个可以直接点选的选项，每个选项不超过 8 个字，不加括号或补充说明（如「是题目」「已有一半」「本周五」，而不是「本周五，具体时刻待补充」）。
+   - 拿不准的点放进 openQuestions，最多 3 个，只问会影响判断、而且只有用户本人才知道的事（如他的取舍、别人私下的答复、没写进材料的约束）。能从上下文合理推断的不要问：年份、星期几默认按今天推算；称呼「你」就是用户本人；材料里写明的不要再确认；常识和格式类问题不要问。宁可少问，没有值得问的就留空。问题一句话、口语化；每个给 2–4 个可以直接点选的选项，每个选项不超过 8 个字，不加括号或补充说明（如「是题目」「已有一半」「本周五」，而不是「本周五，具体时刻待补充」）。
 3. 如果 submit_workcard 返回错误，按错误逐条修正后重新提交。
 全部用中文。`;
 
@@ -220,7 +220,8 @@ export async function draftWorkCard(state: AgentState, input: IntakeInput): Prom
 
   const agent = createWorkAgent({ state, model: input.model, tools, systemPrompt: SYSTEM, projectId: input.projectId, getApiKey: input.getApiKey });
   const list = input.evidenceIds.map((id) => `- ${id}：${state.evidence[id]?.title}`).join("\n");
-  await agent.prompt(`目标：${input.goal}\n\n可用材料：\n${list || "（无，只根据目标整理）"}`);
+  const today = new Date().toLocaleDateString("zh-CN", { timeZone: process.env.DISPLAY_TZ || "Asia/Shanghai", year: "numeric", month: "long", day: "numeric", weekday: "long" });
+  await agent.prompt(`今天是 ${today}。\n目标：${input.goal}\n\n可用材料：\n${list || "（无，只根据目标整理）"}`);
   if (!card && agent.state.errorMessage) lastErrors.push(agent.state.errorMessage);
   return { card, attempts, errors: lastErrors };
 }
