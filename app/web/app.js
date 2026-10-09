@@ -525,7 +525,7 @@ function activeView(c) {
     <div class="cta2">
       ${canSim ? `<button class="demo play" data-act="sim-pr"><img src="/play.svg" alt="" width="40" height="40"><span><b>模拟一次变化：Git 仓库中 #412 支付流程 PR 合并了</b><small>看看我会怎么发现变化、调整风险判断</small></span></button>`
         : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
-        : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么</span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>`}
+        : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么<small class="faint" style="display:block;font-size:12px;margin-top:2px">支持 txt、md、csv、json、ics 文件</small></span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>`}
     </div>
   </div>`;
 }
