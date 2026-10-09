@@ -272,7 +272,7 @@ function sceneModal() {
   return `<div class="modal-bg" data-act="close-scene"><div class="modal scene-m" role="dialog" aria-label="${c.title}" data-act="noop">
     <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="choice sm" data-act="close-scene">关闭</button></div>
     <div class="scene-body" style="padding-top:20px">
-      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" || i.key === "day" ? 2 : 4}" placeholder="${i.ph}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
+      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.ph.startsWith("暂不支持") ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
     </div>
     <div class="scene-f"><button class="btn" data-act="scene-sample">用示例数据试试</button><span style="flex:1"></span><button class="btn mint lg" data-act="scene-go">${c.cta}</button></div>
   </div></div>`;
@@ -844,11 +844,11 @@ const actions = {
   why() { S.why = !S.why; render(); },
   scene(el) { S.scene = el.dataset.id; S.sceneIn = {}; render(); },
   "close-scene"() { S.scene = null; render(); },
-  "scene-sample"() { S.sceneIn = { ...SCENES[S.scene].sample }; render(); },
+  "scene-sample"() { S.sceneIn = { ...SCENES[S.scene].sample }; return actions["scene-go"](); },
   "scene-go"() {
     const c = SCENES[S.scene], v = S.sceneIn;
     const filled = c.inputs.filter((i) => (v[i.key] ?? "").trim());
-    if (!filled.length) return toast("给我一点信息，或者先用示例数据试试", true);
+    if (!filled.length) return toast("输入框还是空的，可以直接点「用示例数据试试」", true);
     const sid = S.scene; S.scene = null;
     return withBusy("我在看你给的信息，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
       const r = await api("/candidates", { text: `${c.title}\n${c.frame}` });
