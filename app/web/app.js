@@ -272,6 +272,9 @@ function sceneModal() {
   return `<div class="modal-bg" data-act="close-scene"><div class="modal scene-m" role="dialog" aria-label="${c.title}" data-act="noop">
     <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="choice sm" data-act="close-scene">关闭</button></div>
     <div class="scene-body" style="padding-top:20px">
+      ${S.scene === "release" ? `<div class="sfold">${cIcon("folder")}<div style="flex:1"><b>接管项目文件夹（推荐）</b><div class="s13" style="color:var(--ink2);margin-top:2px">选一个项目目录，我先读一遍理出进展；之后里面的文件有变动，我会自动判断牵动了什么并提醒你（网页开着时检查）</div></div>
+        ${"showDirectoryPicker" in window ? `<button class="btn mint" data-act="scene-folder">选择文件夹</button>` : `<span class="s12 faint">需要 Chrome 或 Edge</span>`}</div>
+        <div class="sor">或者先粘贴</div>` : ""}
       ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.ph.startsWith("暂不支持") ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
     </div>
     <div class="scene-f"><button class="btn" data-act="scene-sample">用示例数据试试</button><span style="flex:1"></span><button class="btn mint lg" data-act="scene-go">${c.cta}</button></div>
@@ -473,6 +476,8 @@ function activeView(c) {
   const others = all.filter((p) => !prem.includes(p));
   const attention = all.filter((p) => p.inferred || !p.confirmed);
   const canDemo = c.id === "wc_alex" && s.premises.pr_budget?.value === "50 万";
+  const ghEv = (c.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => e?.ref === "github" && /#412/.test(e.excerpt));
+  const canSim = ghEv && !/#412[^\n]*Merged/.test(ghEv.excerpt) && !Object.values(s.evidence).some((e) => e.supersedes === ghEv.id);
   return `<div style="display:flex;flex-direction:column;gap:16px">
     ${changesFor(c.id).length ? `<div class="amber row" style="justify-content:space-between"><span>有一处前提变化需要你决定</span><button class="btn" data-act="show-ripple">去处理</button></div>` : ""}
     ${Object.values(st().proposals ?? {}).some((p) => p.workCardId === c.id && p.status === "pending") ? `<div class="amber">有一处变化在右边等你确认</div>` : ""}
@@ -497,7 +502,8 @@ function activeView(c) {
     </div>
     <div class="panel pad24">${actionsBlock(c)}</div>
     <div class="cta2">
-      ${canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
+      ${canSim ? `<button class="demo play" data-act="sim-pr"><img src="/play.svg" alt="" width="40" height="40"><span><b>模拟一次变化：Git 仓库中 #412 支付流程 PR 合并了</b><small>看看我会怎么发现变化、调整风险判断</small></span></button>`
+        : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
         : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么</span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>`}
     </div>
   </div>`;
@@ -844,6 +850,25 @@ const actions = {
   why() { S.why = !S.why; render(); },
   scene(el) { S.scene = el.dataset.id; S.sceneIn = {}; render(); },
   "close-scene"() { S.scene = null; render(); },
+  async "scene-folder"() {
+    const c = SCENES.release; S.scene = null; render();
+    await pickFolder(); if (!S.folder) return;
+    const ids = Object.values(S.folder.files).map((f) => f.evidenceId).filter(Boolean);
+    if (!ids.length) return toast("这个文件夹里没有我能读的文件（txt / md / csv / json）", true);
+    return withBusy("我在读这个文件夹，把项目进展理一理\n要一小会儿，可以先喝口水", async () => {
+      const r = await api("/candidates", { text: `${c.title}：${S.folder.name}`, brief: c.frame });
+      const d = await api(`/cards/${r.result.id}/draft`, { evidenceIds: ids });
+      openCard(d.result.id);
+    });
+  },
+  "sim-pr": () => withBusy("Git 仓库里有新动静，我看看", async () => {
+    const s = st(), c = s.workCards[S.sel];
+    const old = (c?.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => e?.ref === "github" && /#412/.test(e.excerpt));
+    if (!old) return;
+    const text = old.excerpt.replace(/#412[^\n]*/, "#412 支付流程改版（张明）— Merged 10/10，reviewer 王磊已通过，CI 通过");
+    const r = await api("/materials", { title: "GitHub PR / Issue（更新）", text, source: "local_folder", ref: "github", supersedes: old.id });
+    if (!reportChanges(r.result.changes, r.result.proposals)) toast("看过了，这次变化没有改变卡上的判断");
+  }),
   "scene-sample"() { S.sceneIn = { ...SCENES[S.scene].sample }; return actions["scene-go"](); },
   "scene-go"() {
     const c = SCENES[S.scene], v = S.sceneIn;

@@ -462,3 +462,8 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 
 .newmat{flex:1;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);background:var(--g-mint);border-radius:12px;padding:12px 14px 12px 18px;font-size:14px;color:var(--ink2)}
 .newmat.over{border-color:var(--mint)}
+
+.sfold{display:flex;align-items:center;gap:14px;border:1px solid var(--mint);background:var(--g-mint);border-radius:12px;padding:14px 16px}
+.sfold b{font-size:15px}
+.sor{text-align:center;font-size:12px;color:var(--ink4);display:flex;align-items:center;gap:10px}
+.sor::before,.sor::after{content:"";flex:1;border-top:1px solid var(--line)}
