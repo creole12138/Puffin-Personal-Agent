@@ -21,7 +21,7 @@ export function seedQ4(): AgentState {
 
   s.grants = {
     g_folder: { id: "g_folder", source: "local_folder", scopeLabel: "读取「对齐材料」文件夹 · 仅本项目 · 不对外发送",
-      filter: { dir: "demo-workspace/对齐材料" }, projectId: "p_q4", permissions: ["read", "watch"], grantedAt: T("28T09:05") },
+      filter: { dir: "demo-workspace/对齐材料", where: "example" }, projectId: "p_q4", permissions: ["read", "watch"], grantedAt: T("28T09:05") },
   };
 
   s.premises = {

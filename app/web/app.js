@@ -174,7 +174,8 @@ const CI = {
 const cIcon = (k) => { const [bg, fg, d] = CI[k]; return `<span class="cn-ic" style="background:${bg};color:${fg}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg></span>`; };
 function connectors(grants, cal) {
   const row = (k, name, status, right, cls = "") => `<div class="cn ${cls}">${cIcon(k)}<div class="cn-t"><div>${name}</div>${status ? `<div class="cn-s">${status}</div>` : ""}</div>${right}</div>`;
-  const fGrants = grants.filter((g) => g.source === "local_folder");
+  const fGrants = grants.filter((g) => g.source === "local_folder" && g.filter?.where !== "example" && g.id !== "g_folder");
+  const exGrant = grants.find((g) => g.source === "local_folder" && (g.filter?.where === "example" || g.id === "g_folder"));
   const folder = S.folder
     ? row("folder", "本机项目文件夹", `「${esc(S.folder.name)}」· 网页开着时检查`, `<button class="link" data-act="folder-stop">停止</button>`, "on")
     : fGrants.length ? row("folder", "本机项目文件夹", `${esc(fGrants[0].scopeLabel)}`, `<button class="link" data-act="revoke" data-id="${fGrants[0].id}">收回</button>`, "on")
@@ -186,8 +187,9 @@ function connectors(grants, cal) {
       + (S.navCal ? `<div class="cn-cal"><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="navcal"><button class="btn sm mint" data-act="cal">连接</button></div>` : "");
   const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
     .map(([k, n]) => row(k, n, "", `<button class="cn-soon" data-act="soon" data-v="${n}">即将支持</button>`, "off")).join("");
+  const ex = exGrant ? row("folder", "示例文件夹「对齐材料」（模拟）", "Q4 规划示例自带，无需创建", "", "on") : "";
   const vf = Object.values(st().evidence).some((e) => e.ref?.startsWith(`${VF}/`)) ? row("folder", "示例项目文件夹（模拟）", "正在关注 · 3 个文件", "", "on") : "";
-  return folder + vf + calRow + `<div class="cn-sep">示意 · 即将支持</div>` + soon;
+  return folder + ex + vf + calRow + `<div class="cn-sep">示意 · 即将支持</div>` + soon;
 }
 function matsModal() {
   if (!S.mats) return "";
