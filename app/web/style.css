@@ -413,3 +413,11 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .landing .row.cta{margin-top:44px;gap:12px}
 .landing-foot{margin-top:auto;padding-top:56px;font-size:12px !important;color:var(--ink4) !important;line-height:1.7;border-top:0}
 .landing .pillars{margin-bottom:0}
+/* 落地页四卡渐变 */
+.landing .pillar{border-color:transparent}
+.landing .pillar:nth-child(1){background:linear-gradient(135deg,#E6F9F1 0%,#BFEEDC 100%)}
+.landing .pillar:nth-child(2){background:linear-gradient(135deg,#E8F2FF 0%,#C4DDFB 100%)}
+.landing .pillar:nth-child(3){background:linear-gradient(135deg,#FFF4E3 0%,#FFD9B0 100%)}
+.landing .pillar:nth-child(4){background:linear-gradient(135deg,#F3EDFF 0%,#DCCDFB 100%)}
+.landing .pillar b{color:var(--ink)}
+.landing .pillar .muted{color:var(--ink2)}
