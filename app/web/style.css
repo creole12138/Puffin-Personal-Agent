@@ -476,3 +476,6 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .sin>span{font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
 .sin>span::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--mint)}
 .scene-body{gap:16px}
+
+.x-btn{width:32px;height:32px;border:0;background:transparent;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink3);cursor:pointer;flex:none}
+.x-btn:hover{background:rgba(27,43,51,.08);color:var(--ink)}

@@ -194,7 +194,7 @@ function matsModal() {
   const ev = Object.values(st().evidence).filter((e) => !["chat", "edit"].includes(e.ref));
   return `<div class="modal-bg" data-act="close-mats"><div class="modal" role="dialog" aria-label="全部材料" data-act="noop">
     <div class="modal-h">${ICON_FILE}<b>全部材料 · ${ev.length} 份</b><span style="flex:1"></span>
-      <label class="btn sm mint" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics,.rtf" data-change="material-files" hidden></label><button class="choice sm" data-act="close-mats">关闭</button></div>
+      <label class="btn sm mint" style="cursor:pointer">＋ 添加<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics,.rtf" data-change="material-files" hidden></label><button class="x-btn" data-act="close-mats" aria-label="关闭"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div style="padding:8px 20px 16px;overflow:auto">${ev.map((e) => `<div class="li"><div><div>${esc(e.title)}</div><div class="s12 faint">${esc((e.excerpt || "").slice(0, 60))}</div></div><span class="s12 faint" style="white-space:nowrap">${e.at ? timeAgo(e.at) : ""}</span></div>`).join("") || `<div class="s13 muted" style="padding:12px 0">还没有材料。可以在首页把文件拖进输入框，或点「添加」。</div>`}</div></div></div>`;
 }
 
@@ -299,7 +299,7 @@ function sceneModal() {
   const c = SCENES[S.scene]; if (!c) return "";
   const v = S.sceneIn;
   return `<div class="modal-bg" data-act="close-scene"><div class="modal scene-m" role="dialog" aria-label="${c.title}" data-act="noop">
-    <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="choice sm" data-act="close-scene">关闭</button></div>
+    <div class="scene-top g-${c.grad}"><div><b>${c.title}</b><div class="s13" style="color:var(--ink2);margin-top:4px">${c.sub}</div></div><button class="x-btn" data-act="close-scene" aria-label="关闭"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div class="scene-body" style="padding-top:20px">
       ${S.scene === "release" ? `<div class="sfold">${cIcon("folder")}<div style="flex:1"><b>接管项目文件夹（推荐）</b><div class="s13" style="color:var(--ink2);margin-top:2px">选一个项目目录，我先读一遍理出进展；之后里面的文件有变动，我会自动判断牵动了什么并提醒你（网页开着时检查）</div></div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">${"showDirectoryPicker" in window ? `<button class="btn mint" data-act="scene-folder">选择文件夹</button>` : `<span class="s12 faint">需要 Chrome 或 Edge</span>`}<button class="btn" data-act="scene-vfolder">用示例项目文件夹试试</button></div></div>
@@ -453,7 +453,7 @@ function previewModal() {
   const a = S.preview && st()?.actions[S.preview]; if (!a?.output) return "";
   return `<div class="modal-bg" data-act="close-preview"><div class="modal" role="dialog" aria-label="${esc(fileName(a))}" data-act="noop">
     <div class="modal-h">${ICON_FILE}<b>${esc(fileName(a))}</b><span style="flex:1"></span>
-      <button class="btn sm mint" data-act="download-out" data-id="${a.id}">下载</button><button class="choice sm" data-act="close-preview">关闭</button></div>
+      <button class="btn sm mint" data-act="download-out" data-id="${a.id}">下载</button><button class="x-btn" data-act="close-preview" aria-label="关闭"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <pre class="modal-b">${esc(a.output.body)}</pre></div></div>`;
 }
 const whyBtn = () => `<button class="why-btn ${S.why ? "on" : ""}" data-act="why" aria-expanded="${S.why}">${S.why ? ICON_CHEV_UP : ICON_CHEV_DOWN}依据</button>`;
