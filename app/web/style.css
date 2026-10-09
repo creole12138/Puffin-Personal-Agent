@@ -404,3 +404,12 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .cn-sep{font-size:11px;color:var(--ink4);margin-top:6px;padding-top:8px;border-top:1px dashed var(--line2)}
 .cn-cal{display:flex;gap:6px;padding:0 0 6px 38px}.cn-cal input{flex:1;min-width:0;height:28px;font-size:12px;border:1px solid var(--line2);border-radius:8px;padding:0 8px}
 .menu .danger{color:var(--red)}
+
+/* 落地页留白 */
+.landing{min-height:100vh;display:flex;flex-direction:column;padding:88px 32px 32px;max-width:860px}
+.landing .lede{margin:36px 0 0;font-size:16px;line-height:1.85;max-width:720px}
+.landing .pillars{margin-top:40px;gap:16px}
+.landing .pillar{padding:20px 20px 22px;gap:8px;line-height:1.7}
+.landing .row.cta{margin-top:44px;gap:12px}
+.landing-foot{margin-top:auto;padding-top:56px;font-size:12px !important;color:var(--ink4) !important;line-height:1.7;border-top:0}
+.landing .pillars{margin-bottom:0}

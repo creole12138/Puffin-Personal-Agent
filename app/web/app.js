@@ -83,18 +83,18 @@ function render() {
 function landing() {
   return `<div class="landing">
     <div class="hero">${AV(84, 74)}<h1>我是云朵小管家。<br>把一件正在推进的事交给我。</h1></div>
-    <p style="margin-top:22px">我记住的不是聊天记录，而是这件事的状态：在推进什么、依据是什么、哪些前提一变会影响什么。预算改了、会议挪了，我会告诉你哪些决定受影响、哪些动作已经暂停、哪些已经没法撤回。</p>
+    <p class="lede">我记住的不是聊天记录，而是这件事的状态：在推进什么、依据是什么、哪些前提一变会影响什么。预算改了、会议挪了，我会告诉你哪些决定受影响、哪些动作已经暂停、哪些已经没法撤回。</p>
     <div class="pillars">
       <div class="pillar"><b>有来源</b><span class="muted s13">每条结论都能点开看依据来自哪份材料。</span></div>
       <div class="pillar"><b>有边界</b><span class="muted s13">只读你授权的范围；对外的事只起草，不替你发出。</span></div>
       <div class="pillar"><b>会变化</b><span class="muted s13">前提一变，受影响的决定和动作一起被找出来。</span></div>
       <div class="pillar"><b>可续接</b><span class="muted s13">状态可以导出，换个会话、换个模型接着做。</span></div>
     </div>
-    <div class="row">
+    <div class="row cta">
       <button class="btn mint lg" data-act="create">开始</button>
       <label class="btn lg">导入之前导出的状态<input type="file" accept=".json,application/json" data-change="import" hidden></label>
     </div>
-    <p class="s12 faint" style="margin-top:28px">每个人会得到一个专属链接，只有拿到链接的人能看到里面的内容。上传的材料只保存在这个工作区，可以随时删除。请不要上传敏感信息。</p>
+    <p class="landing-foot">每个人会得到一个专属链接，只有拿到链接的人能看到里面的内容。上传的材料只保存在这个工作区，可以随时删除。请不要上传敏感信息。</p>
   </div>`;
 }
 
