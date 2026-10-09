@@ -52,7 +52,7 @@ export function describeProposal(state: AgentState, p: Proposal): string {
 }
 
 /** 用户随口一句 → 候选卡（先记下、第一步是什么、可能属于哪个项目） */
-export async function makeCandidate(state: AgentState, brains: Brains, text: string): Promise<ID> {
+export async function makeCandidate(state: AgentState, brains: Brains, text: string, brief = ""): Promise<ID> {
   const projects = Object.values(state.projects).map((p) => ({ id: p.id, name: p.name, goal: p.goal }));
   let title = text.trim().slice(0, 30), firstStep = "先把上次聊到哪、还差什么列出来", projectId: string | null = null, why = "";
   if (brains.provider) {
@@ -65,7 +65,7 @@ export async function makeCandidate(state: AgentState, brains: Brains, text: str
           "所以它必须：用你的口吻向用户提议（如“先把……理一下”“帮你把……列出来”）；描述的是整理和梳理，而不是让用户去做事，也不是去联系别人；≤20 字。\n" +
           "例：用户说“和 Alex 还有一些工作一直没对齐”→ firstStep“先把上次聊到哪、还差什么列出来”。\n" +
           "如果明显属于某个已有项目，给出 projectId 和一句理由 why（点出共同的人、材料或前提）；否则 projectId 为 null、why 为空字符串。不要编造。" },
-        { role: "user", content: JSON.stringify({ said: text, projects }) },
+        { role: "user", content: JSON.stringify({ said: brief ? `${text}\n${brief}` : text, projects }) },
       ],
       schema: { type: "object", additionalProperties: false, required: ["title", "firstStep", "projectId", "why"], properties: {
         title: { type: "string" }, firstStep: { type: "string" }, why: { type: "string" },
@@ -75,7 +75,7 @@ export async function makeCandidate(state: AgentState, brains: Brains, text: str
     projectId = r.data.projectId && state.projects[r.data.projectId] ? r.data.projectId : null;
   }
   const evId = newId("evd");
-  state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "你说的", excerpt: text, observedAt: now() };
+  state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "你说的", excerpt: brief ? `${text}\n${brief}` : text, observedAt: now() };
   const id = newId("wc");
   state.workCards[id] = { id, stage: "candidate", title, nextStep: firstStep, decisionIds: [], actionIds: [], premiseIds: [],
     openQuestions: [], reminders: [], originEvidenceIds: [evId], createdAt: now(), updatedAt: now(),

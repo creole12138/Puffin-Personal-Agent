@@ -53,7 +53,7 @@ const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/decisions\/([\w-]+)\/resolve$/, (ws, b, m) => ws.resolve(m[1]!, b.kind === "keep" ? "keep" : "adopt_suggestion", b.note)],
   ["POST", /^\/premises\/([\w-]+)$/, (ws, b, m) => ws.editPremise(m[1]!, String(b.value))],
   ["POST", /^\/grants$/, (ws, b) => ws.grant(b)],
-  ["POST", /^\/candidates$/, (ws, b) => ws.candidate(String(b.text || ""))],
+  ["POST", /^\/candidates$/, (ws, b) => ws.candidate(String(b.text || ""), String(b.brief || ""))],
   ["POST", /^\/cards\/([\w-]+)\/remind$/, (ws, _b, m) => ws.remind(m[1]!)],
   ["POST", /^\/cards\/([\w-]+)\/dismiss$/, (ws, _b, m) => ws.dismiss(m[1]!)],
   ["POST", /^\/cards\/([\w-]+)\/project$/, (ws, b, m) => ws.setProject(m[1]!, { projectId: b.projectId ?? null, newName: b.newName })],

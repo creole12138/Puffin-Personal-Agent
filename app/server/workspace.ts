@@ -178,11 +178,11 @@ export class Workspace {
     }
   }
 
-  candidate(text: string) {
+  candidate(text: string, brief = "") {
     return this.run(async (s) => {
       if (!text.trim()) throw new Error("说一句你想推进的事");
       if (this.brains.provider) this.useLLM(1);
-      return { id: await makeCandidate(s, this.brains, text) };
+      return { id: await makeCandidate(s, this.brains, text, brief) };
     });
   }
 

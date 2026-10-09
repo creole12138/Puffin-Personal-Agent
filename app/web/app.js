@@ -498,7 +498,7 @@ function activeView(c) {
     <div class="panel pad24">${actionsBlock(c)}</div>
     <div class="cta2">
       ${canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
-        : `<label class="demo" style="cursor:pointer" data-drop="material">给我一份新材料，我看看会不会改变什么<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label>`}
+        : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么</span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics" data-change="material-files" hidden></label></div>`}
     </div>
   </div>`;
 }
@@ -851,7 +851,7 @@ const actions = {
     if (!filled.length) return toast("输入框还是空的，可以直接点「用示例数据试试」", true);
     const sid = S.scene; S.scene = null;
     return withBusy("我在看你给的信息，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
-      const r = await api("/candidates", { text: `${c.title}\n${c.frame}` });
+      const r = await api("/candidates", { text: c.title, brief: c.frame });
       const cid = r.result.id, ids = [];
       for (const i of filled) { const m = await api("/materials", { title: `${i.label}（${c.title}）`, text: v[i.key], ref: i.ref }); ids.push(m.result.evidence.id); }
       const d = await api(`/cards/${cid}/draft`, { evidenceIds: ids });
