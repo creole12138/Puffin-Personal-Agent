@@ -9,7 +9,7 @@
 import type { AgentState, DecisionAssessment, ID, ImpactItem, Proposal, ProposalSource } from "../types.ts";
 import { emit } from "./events.ts";
 import { newId, now } from "./ids.ts";
-import { applyPremiseChange, computeImpacts, directlyAffectedDecisions, type Assessor } from "./ripple.ts";
+import { applyPremiseChange, computeImpacts, directlyAffectedDecisions, type Assessor, type Recomputer } from "./ripple.ts";
 
 /** 起草补救消息（通常由 LLM 实现）；不可用时用模板 */
 export type Drafter = (input: {
@@ -30,6 +30,7 @@ export interface ProposeInput {
   confidence: Proposal["confidence"];
   assess: Assessor;
   drafter?: Drafter;
+  recompute?: Recomputer;
 }
 
 export async function preview(state: AgentState, premiseId: ID, from: string, to: string, assess: Assessor) {
@@ -76,15 +77,15 @@ export async function propose(state: AgentState, input: ProposeInput): Promise<P
     status: "pending", assessments, drafts, createdAt: now(),
   };
   (state.proposals ??= {})[prop.id] = prop;
-  if (prop.mode === "auto") await apply(state, prop);
+  if (prop.mode === "auto") await apply(state, prop, input.recompute);
   else emit(state, { type: "plan_proposed", actor: "agent", workCardId: cardId,
     summary: `我判断${p.label}可能从 ${p.value} 变成 ${input.to}，因为${prop.gateReason}，先问你`, payload: { proposalId: prop.id } });
   return prop;
 }
 
-async function apply(state: AgentState, prop: Proposal) {
+async function apply(state: AgentState, prop: Proposal, recompute?: Recomputer) {
   const actor = prop.source === "user" ? "user" : prop.source === "material" ? "watcher" : "agent";
-  const pc = await applyPremiseChange(state, { premiseId: prop.change.premiseId, to: prop.change.to, evidenceId: prop.evidenceId, actor, assess: async () => prop.assessments });
+  const pc = await applyPremiseChange(state, { premiseId: prop.change.premiseId, to: prop.change.to, evidenceId: prop.evidenceId, actor, assess: async () => prop.assessments, recompute });
   prop.premiseChangeId = pc.id;
   prop.status = "applied";
   const p = state.premises[prop.change.premiseId]!;
@@ -102,10 +103,10 @@ async function apply(state: AgentState, prop: Proposal) {
 }
 
 /** 用户点确认：pending → 生效；applied（有推断标记或待发消息）→ 标记确认 */
-export async function confirmProposal(state: AgentState, id: ID) {
+export async function confirmProposal(state: AgentState, id: ID, opts: { recompute?: Recomputer } = {}) {
   const prop = state.proposals?.[id];
   if (!prop) throw new Error("这条提议不存在");
-  if (prop.status === "pending") await apply(state, prop);
+  if (prop.status === "pending") await apply(state, prop, opts.recompute);
   else if (prop.status !== "applied") throw new Error("这条提议已经处理过了");
   const p = state.premises[prop.change.premiseId];
   if (p) { p.confirmed = true; p.inferred = undefined; }

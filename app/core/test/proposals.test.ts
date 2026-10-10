@@ -63,3 +63,23 @@ test("同一前提的新提议会取代旧的待确认提议", async () => {
   assert.equal(s.proposals![a!.id]!.status, "corrected");
   assert.equal(s.proposals![b!.id]!.status, "pending");
 });
+
+test("前提变了：由它算出的产出要真的重算；重算不了就暂停，不假装已更新", async () => {
+  const s = seedQ4();
+  const p = await propose(s, { premiseId: "pr_budget", to: "30 万", source: "material", evidenceId: ev(s), reason: "预算表 v3", confidence: "high", assess: ruleAssessor });
+  const recompute = async ({ state, actionId, to }: any) => ({ body: state.actions[actionId].output.body.replace(/50 万/g, to).replace("90%", "150%") });
+  await confirmProposal(s, p!.id, { recompute });
+  const t = s.actions.a_costTable!;
+  assert.match(t.output!.body, /计算依据：Q4 总预算 30 万/);
+  assert.doesNotMatch(t.output!.body, /50 万/);
+  assert.equal(t.outputHistory?.at(-1)?.reason, "Q4 总预算：50 万 → 30 万".replace("Q4 总预算", s.premises.pr_budget!.label));
+  assert.ok(s.events.some((e) => /成本对比表.*已按新的.*30 万.*重新计算/.test(e.summary)));
+
+  // 没有重算能力（或重算结果没写进新值）：产出不动、动作暂停、时间线说实话
+  const s2 = seedQ4();
+  const p2 = await propose(s2, { premiseId: "pr_budget", to: "30 万", source: "material", evidenceId: ev(s2), reason: "预算表 v3", confidence: "high", assess: ruleAssessor });
+  await confirmProposal(s2, p2!.id, { recompute: async ({ state, actionId }: any) => ({ body: state.actions[actionId].output.body }) });
+  assert.match(s2.actions.a_costTable!.output!.body, /50 万/);
+  assert.equal(s2.actions.a_costTable!.status, "paused");
+  assert.ok(!s2.events.some((e) => /成本对比表.*重新计算/.test(e.summary) && !/没能/.test(e.summary)));
+});

@@ -10,7 +10,7 @@ import {
   type AgentState, type Evidence, type ID, type PremiseChange,
 } from "../core/src/index.ts";
 import type { Brains } from "./brains.ts";
-import { chat, describeProposal, makeCandidate, makeDrafter, makePlan, pushChat, runPlan } from "./agentOps.ts";
+import { chat, describeProposal, makeCandidate, makeDrafter, makeRecomputer, makePlan, pushChat, runPlan } from "./agentOps.ts";
 import { confirmProposal, markCorrected, propose, rollbackTo, type Proposal } from "../core/src/index.ts";
 
 export class LimitError extends Error {}
@@ -90,7 +90,7 @@ export class Workspace {
         for (const m of matches) {
           // 新材料里读出的变化也走统一入口：把握高且影响小直接生效，否则先问
           const prop = await propose(s, { premiseId: m.premiseId, to: m.newValue, source: "material",
-            evidenceId: ev.id, reason: `《${ev.title}》里写着“${m.quote}”`, confidence: m.confidence, assess: this.brains.assess, drafter: makeDrafter(this.brains) });
+            evidenceId: ev.id, reason: `《${ev.title}》里写着“${m.quote}”`, confidence: m.confidence, assess: this.brains.assess, drafter: makeDrafter(this.brains), recompute: makeRecomputer(this.brains) });
           if (!prop) continue;
           proposals.push(prop);
           if (prop.premiseChangeId) changes.push(s.premiseChanges[prop.premiseChangeId]!);
@@ -160,7 +160,7 @@ export class Workspace {
       const id = newId("evd");
       s.evidence[id] = { id, source: "user_input", ref: "edit", title: "你的修改", excerpt: `${p.label}：${value}`, observedAt: new Date().toISOString() };
       markCorrected(s, premiseId);
-      const prop = await propose(s, { premiseId, to: value, source: "user", evidenceId: id, reason: "你改的", confidence: "high", assess: this.brains.assess, drafter: makeDrafter(this.brains) });
+      const prop = await propose(s, { premiseId, to: value, source: "user", evidenceId: id, reason: "你改的", confidence: "high", assess: this.brains.assess, drafter: makeDrafter(this.brains), recompute: makeRecomputer(this.brains) });
       await this.refreshPlans(s, [prop]);
       if (prop?.drafts.length && prop.workCardId) pushChat(s, prop.workCardId, "agent", `之前发出去的${prop.drafts.length > 1 ? "几条" : "那条"}消息里还是旧的${p.label}，我拟好了更正，你看看。`, { proposalIds: [prop.id] });
       return prop?.premiseChangeId ? s.premiseChanges[prop.premiseChangeId]! : null;
@@ -261,7 +261,7 @@ export class Workspace {
   }
 
   confirm(proposalId: ID) {
-    return this.run(async (s) => { const p = await confirmProposal(s, proposalId); await this.refreshPlans(s, [p]); return p; });
+    return this.run(async (s) => { const p = await confirmProposal(s, proposalId, { recompute: makeRecomputer(this.brains) }); await this.refreshPlans(s, [p]); return p; });
   }
   cancelAction(actionId: ID) {
     return this.run((s) => {

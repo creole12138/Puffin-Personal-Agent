@@ -127,6 +127,8 @@ export interface Action {
   grantId?: ID;
   /** Agent 做出的产出（起草的文档、消息正文等），用户可查看 */
   output?: { kind: "document" | "message" | "note"; title: string; body: string; to?: string };
+  /** 产出因前提变化被重算前的版本（最近的在后） */
+  outputHistory?: { body: string; reason: string; at: ISOTime }[];
   doneAt?: ISOTime;
   /** 对外消息草稿经用户确认、可以发送的时间（本原型不代发） */
   approvedAt?: ISOTime;

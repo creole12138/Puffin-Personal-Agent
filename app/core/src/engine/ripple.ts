@@ -93,12 +93,33 @@ export function computeImpacts(
   return impacts;
 }
 
+/** 按新前提真正重算一份产出（通常由 LLM 实现），返回完整的新正文 */
+export type Recomputer = (input: { state: AgentState; actionId: ID; premiseLabel: string; from: string; to: string }) => Promise<{ body: string }>;
+
 export interface ApplyChangeInput {
   premiseId: ID;
   to: string;
   evidenceId: ID;
   actor?: "user" | "agent" | "watcher";
   assess: Assessor;
+  recompute?: Recomputer;
+}
+
+const squash = (t: string) => t.replace(/\s+/g, "");
+/** 重算并校验：新正文必须和旧的不同、且写进了新值；不过关重试一次。成功才替换产出 */
+async function recomputeOutput(state: AgentState, a: Action, label: string, from: string, to: string, recompute: Recomputer): Promise<boolean> {
+  const old = a.output!;
+  for (let i = 0; i < 2; i++) {
+    try {
+      const r = await recompute({ state, actionId: a.id, premiseLabel: label, from, to });
+      const body = r.body?.trim();
+      if (!body || body === old.body.trim() || !squash(body).includes(squash(to))) continue;
+      (a.outputHistory ??= []).push({ body: old.body, reason: `${label}：${from} → ${to}`, at: now() });
+      a.output = { ...old, body };
+      return true;
+    } catch (e) { console.warn(`重算「${a.label}」失败：${(e as Error).message}`); }
+  }
+  return false;
 }
 
 /** 应用前提变化：更新前提 → 判断 → 传播 → 写状态与事件 */
@@ -166,8 +187,18 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
         emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
           summary: `「${a.label}」你已经发出去了；我起草了一份更正，等你确认`, payload: { actionId: comp.id, compensationFor: a.id, premiseChangeId: change.id } });
       } else if (i.handling === "auto_updated") {
-        emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
-          summary: `「${a.label}」已按新的 ${premise.label}重新计算`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id } });
+        if (!a.output) {
+          emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
+            summary: `「${a.label}」之后按新的${premise.label}（${input.to}）来做`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id } });
+        } else if (input.recompute && await recomputeOutput(state, a, premise.label, from, input.to, input.recompute)) {
+          emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
+            summary: `「${a.label}」已按新的${premise.label}（${input.to}）重新计算`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id } });
+        } else {
+          // 没能真正重算：不假装更新，先暂停，产出保持原样并标明依据已过时
+          a.status = "paused";
+          emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
+            summary: `「${a.label}」还是按 ${from} 算的，我没能自动重算，先暂停；可以在对话里让我重算`, payload: { actionId: a.id, status: "paused", recomputeFailed: true, premiseChangeId: change.id } });
+        }
       }
     }
   }

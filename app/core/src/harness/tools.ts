@@ -5,7 +5,7 @@
 import { Type } from "typebox";
 import { emit } from "../engine/events.ts";
 import { newId, now } from "../engine/ids.ts";
-import { type Assessor } from "../engine/ripple.ts";
+import { type Assessor, type Recomputer } from "../engine/ripple.ts";
 import { markCorrected, propose, type Drafter } from "../engine/proposals.ts";
 import type { AgentState, ID, Proposal } from "../types.ts";
 import type { WorkTool } from "./workAgent.ts";
@@ -17,6 +17,7 @@ export interface ToolContext {
   /** 本次可读的材料；为空表示卡片与项目相关的全部材料 */
   evidenceIds?: ID[];
   drafter?: Drafter;
+  recompute?: Recomputer;
   /** 本轮产生的变更提议（对话把它们挂到回复消息上） */
   onProposal?: (p: Proposal) => void;
   /** 本轮用户消息原文。模型声称的「用户原话」必须能在这里找到，否则不算用户明说 */
@@ -154,7 +155,7 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
           // 原话对不上：不能当用户明说处理，降级成推断，走「先问用户」
           const evId = newId("evd");
           state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "推断", excerpt: "你没有明说，是我从对话里推断的", observedAt: now() };
-          const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "inference", evidenceId: evId, reason: "你没有明说，是我推断的", confidence: "medium", assess: ctx.assess, drafter: ctx.drafter });
+          const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "inference", evidenceId: evId, reason: "你没有明说，是我推断的", confidence: "medium", assess: ctx.assess, drafter: ctx.drafter, recompute: ctx.recompute });
           if (prop) ctx.onProposal?.(prop);
           emit(state, { type: "evidence_observed", actor: "agent", workCardId: cardId, visibleInTimeline: false, summary: `「${pr.label}」的改动没有用户原话支撑，改为先问用户`, payload: { claimedQuote: String(p.userQuote ?? "").slice(0, 200) } });
           return { content: [{ type: "text", text: `你给的 userQuote 在用户这一轮的消息里找不到，所以没有生效，已改成推断等用户确认${prop?.mode === "ask" ? "（界面会给确认按钮）" : ""}。回复里不要说已经更新，也不要把它说成用户说过的话；如实说这是你的推断，问一句即可。` }], details: {} };
@@ -162,7 +163,7 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
         const evId = newId("evd");
         state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "你在对话里说的", excerpt: p.userQuote, observedAt: now() };
         markCorrected(state, pr.id);
-        const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "user", evidenceId: evId, reason: "你说的", confidence: "high", assess: ctx.assess, drafter: ctx.drafter });
+        const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "user", evidenceId: evId, reason: "你说的", confidence: "high", assess: ctx.assess, drafter: ctx.drafter, recompute: ctx.recompute });
         if (!prop) return { content: [{ type: "text", text: "值没有变化" }], details: {} };
         ctx.onProposal?.(prop);
         const pc = prop.premiseChangeId ? state.premiseChanges[prop.premiseChangeId] : undefined;
@@ -184,7 +185,7 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
         const bad = badValue(p.newValue); if (bad) throw new Error(bad);
         const evId = newId("evd");
         state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "推断", excerpt: p.reason, observedAt: now() };
-        const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "inference", evidenceId: evId, reason: p.reason, confidence: p.confidence, assess: ctx.assess, drafter: ctx.drafter });
+        const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "inference", evidenceId: evId, reason: p.reason, confidence: p.confidence, assess: ctx.assess, drafter: ctx.drafter, recompute: ctx.recompute });
         if (!prop) return { content: [{ type: "text", text: "把握太低，没有提出。回复里可以顺带提一句，不要追问。" }], details: {} };
         ctx.onProposal?.(prop);
         return { content: [{ type: "text", text: prop.mode === "auto"

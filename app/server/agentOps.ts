@@ -5,7 +5,7 @@
 import { Type } from "typebox";
 import {
   BASE_SYSTEM_PROMPT, cardSummary, cardTools, createWorkAgent, emit, newId, now, readableEvidence, templateDrafter,
-  type AgentState, type ChatEntry, type Drafter, type ID, type Proposal, type WorkTool,
+  type AgentState, type ChatEntry, type Drafter, type Recomputer, type ID, type Proposal, type WorkTool,
 } from "../core/src/index.ts";
 import type { Brains } from "./brains.ts";
 
@@ -38,6 +38,23 @@ export function makeDrafter(brains: Brains): Drafter {
         { role: "user", content: JSON.stringify({ 之前发出的: a?.label, 之前的内容: a?.output?.body ?? null, 变化: `${premiseLabel}：${from} → ${to}` }) },
       ],
       schema: { type: "object", additionalProperties: false, required: ["to", "title", "body"], properties: { to: { type: "string" }, title: { type: "string" }, body: { type: "string" } } },
+    });
+    return r.data;
+  };
+}
+
+/** 前提变了，按新值真正重算由它推出的产出（成本表、预算申请等）；没有模型时不提供，交给 ripple 暂停 */
+export function makeRecomputer(brains: Brains): Recomputer | undefined {
+  if (!brains.provider) return undefined;
+  return async ({ state, actionId, premiseLabel, from, to }) => {
+    const a = state.actions[actionId]!;
+    const r = await brains.provider!.generateStructured<{ body: string }>({
+      task: "recompute_output",
+      messages: [
+        { role: "system", content: BASE_SYSTEM_PROMPT.trim() + "\n\n【本次任务】\n下面这份产出是按旧的前提值算出来的。前提变了，请按新值重新计算：凡是由这个前提推出来的数字（占比、余量、合计、是否超出等）都要按新值重算，算术必须正确；写明的计算依据改成新值；和这个前提无关的内容（如各方案自身的成本）保持不变。如果按新值某个方案已经超出，在文中如实标出，不要替用户做决定。保持原来的 Markdown 结构和语气，输出完整的新正文。" },
+        { role: "user", content: JSON.stringify({ 产出标题: a.output?.title ?? a.label, 原正文: a.output?.body ?? "", 变化: `${premiseLabel}：${from} → ${to}` }) },
+      ],
+      schema: { type: "object", additionalProperties: false, required: ["body"], properties: { body: { type: "string" } } },
     });
     return r.data;
   };
@@ -156,7 +173,7 @@ export async function chat(state: AgentState, brains: Brains, cardId: ID, text: 
   pushChat(state, cardId, "user", text, quote ? { quote } : {});
   const made: Proposal[] = [];
   const agent = createWorkAgent({ state, model: brains.model, getApiKey: brains.getApiKey, projectId: c.projectId,
-    tools: cardTools({ state, cardId, assess: brains.assess, drafter: makeDrafter(brains), onProposal: (p) => made.push(p), userText: text }), workState: cardSummary(state, cardId),
+    tools: cardTools({ state, cardId, assess: brains.assess, drafter: makeDrafter(brains), recompute: makeRecomputer(brains), onProposal: (p) => made.push(p), userText: text }), workState: cardSummary(state, cardId),
     systemPrompt: [
       "你在和用户讨论这张工作卡。回答要短（≤3 句），用纯文本，不要用 Markdown 符号（如 ** 或 #）。",
       "用户只是在提问（如「Alex 那边有什么进展」）时，只回答，不要调用 update_premise / add_premise；userQuote 只能原样摘自用户这一轮的话，不能自己编。",

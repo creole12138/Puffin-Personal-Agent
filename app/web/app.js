@@ -679,6 +679,7 @@ function rippleView(c, pc) {
   const nDec = pc.impacts.filter((i) => i.kind === "decision" && i.handling !== "unaffected").length, nAct = pc.impacts.filter((i) => i.kind !== "decision" && i.handling !== "unaffected").length;
   const nAuto = pc.impacts.filter((i) => i.handling === "auto_updated").length, nNeed = pc.impacts.filter((i) => i.handling === "needs_user").length;
   const comp = (i) => Object.values(s.actions).find((a) => a.compensationFor === i.id);
+  const failed = (i) => i.kind === "action" && i.handling === "auto_updated" && s.actions[i.id]?.status === "paused";
   const box = (cls, k, i, extra = "") => `<div class="ritem"><div class="k ${cls}">${k}</div><div class="v">${esc(name(i))}</div>${extra}</div>`;
   return `<div class="panel pad24">
     <div class="rp-head"><div class="t">前提变化：${esc(p?.label)}从 ${esc(pc.from)} 变成 ${esc(pc.to)}</div>
@@ -693,12 +694,12 @@ function rippleView(c, pc) {
         ${S.ownFor === d.id ? `<div class="own"><input type="text" placeholder="直接写你的决定，比如：先做方案 B 的核心部分，A 下季度再补" data-bind="ownText" data-keep="own" value="${esc(S.ownText)}"><button class="btn mint" data-act="resolve-own" data-id="${d.id}">按我的来</button></div><div class="s12 faint">相关的计划和草稿会按你的决定重新检查</div>` : ""}</div>`; }).join("")}
     <div class="grid2" style="gap:12px">
       ${on.filter((i) => i.handling === "paused").map((i) => box("paused", "已暂停，等上面决定", i)).join("")}
-      ${on.filter((i) => i.handling === "auto_updated").map((i) => box("auto", "已自动更新", i)).join("")}
+      ${on.filter((i) => i.handling === "auto_updated").map((i) => failed(i) ? box("paused", "没能自动重算，已暂停", i) : box("auto", i.kind === "action" && s.actions[i.id]?.outputHistory?.length ? `已按 ${esc(pc.to)} 重算` : "已自动更新", i)).join("")}
       ${on.filter((i) => i.handling === "compensate").map((i) => box("comp", "你已发出，需要补一句更正", i, comp(i) ? `<div class="s12" style="margin-top:6px">${comp(i).status === "cancelled" ? "你决定不发更正" : comp(i).approvedAt ? "更正消息已确认，在右边可以复制去发送" : "我起草了一份更正，在右边等你确认"}</div>` : "")).join("")}
       ${on.filter((i) => i.handling === "unaffected").map((i) => box("keep", "仍然成立", i)).join("")}
     </div>
     ${other.length ? `<div class="also"><div class="s12 muted">同一项目里也受影响${c.projectId ? `（${esc(p?.label)}是${esc(s.projects[c.projectId]?.name)}的共享前提条件）` : ""}</div>
-      ${other.map((i) => `<div>· ${esc(s.workCards[i.workCardId]?.title)}：${esc(name(i))}，<span style="color:${i.handling === "auto_updated" ? "var(--green)" : i.handling === "compensate" ? "var(--red)" : "var(--amber)"}">${{ auto_updated: "已自动调整", paused: "等上面决定", needs_user: "需要你决定", compensate: "已发生，已起草更正" }[i.handling]}</span></div>`).join("")}</div>` : ""}
+      ${other.map((i) => `<div>· ${esc(s.workCards[i.workCardId]?.title)}：${esc(name(i))}，<span style="color:${i.handling === "auto_updated" && !failed(i) ? "var(--green)" : i.handling === "compensate" ? "var(--red)" : "var(--amber)"}">${(failed(i) ? "没能自动重算，已暂停" : { auto_updated: "已自动调整", paused: "等上面决定", needs_user: "需要你决定", compensate: "已发生，已起草更正" }[i.handling])}</span></div>`).join("")}</div>` : ""}
     <div><button class="more-link" data-act="show-card">查看完整背景 ›</button></div>
   </div>`;
 }
