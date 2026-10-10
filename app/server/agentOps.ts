@@ -4,10 +4,11 @@
  */
 import { Type } from "typebox";
 import {
-  BASE_SYSTEM_PROMPT, cardSummary, cardTools, createWorkAgent, emit, newId, now, readableEvidence, templateDrafter,
+  BASE_SYSTEM_PROMPT, NEW_PREMISE, cardSummary, cardTools, createWorkAgent, emit, newId, now, readableEvidence, templateDrafter,
   type AgentState, type ChatEntry, type Drafter, type Recomputer, type ID, type Proposal, type WorkTool,
 } from "../core/src/index.ts";
 import type { Brains } from "./brains.ts";
+import { checkReply } from "./replyCheck.ts";
 
 export function pushChat(state: AgentState, scope: string, role: ChatEntry["role"], text: string, extra: Partial<ChatEntry> = {}) {
   state.chats ??= {};
@@ -63,7 +64,7 @@ export function makeRecomputer(brains: Brains): Recomputer | undefined {
 /** 把一条提议写成一句自然语言（新材料触发、没有对话回复时用） */
 export function describeProposal(state: AgentState, p: Proposal): string {
   const src = p.source === "material" ? `《${state.evidence[p.evidenceId]?.title ?? "新材料"}》里，` : "";
-  const what = `${p.change.label}从 ${p.change.from} 变成了 ${p.change.to}`;
+  const what = p.change.from === NEW_PREMISE ? `出现了一个新情况：${p.change.label} = ${p.change.to}` : `${p.change.label}从 ${p.change.from} 变成了 ${p.change.to}`;
   if (p.mode === "auto") return `${src}${what}，我已经按这个更新了。`;
   return `${src}看起来${what}。因为${p.gateReason}，先问你一下：要按这个更新吗？${p.drafts.length ? ` 之前发出去的${p.drafts.length > 1 ? "几条" : "那条"}消息，我也拟好了更正。` : ""}`;
 }
@@ -157,8 +158,10 @@ export async function runPlan(state: AgentState, brains: Brains, cardId: ID) {
   const agent = createWorkAgent({ state, model: brains.model, getApiKey: brains.getApiKey, projectId: c.projectId,
     tools: cardTools({ state, cardId, assess: brains.assess }), workState: cardSummary(state, cardId),
     systemPrompt: "用户已确认下面的执行计划，按步骤推进。每步用工具实际完成（起草文档要写出完整可用的内容）。对外消息只起草。卡上已有「计划中」的动作时，起草它对应的产出要在 forAction 里填那个动作的 id，让它变成已完成，不要另起一条重复的动作；一份产出能覆盖一个动作就够了，不要拆成多份重复文档。完成后用两三句话告诉用户做了什么、还差什么、下一步是什么。" });
+  const since = state.events.length;
   await agent.prompt(`执行计划：\n${c.plan.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`);
-  const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `执行中出了问题：${friendlyError(agent.state.errorMessage)}。` : "计划里的事做完了。");
+  let reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `执行中出了问题：${friendlyError(agent.state.errorMessage)}。` : "计划里的事做完了。");
+  if (!agent.state.errorMessage) reply = (await checkReply(state, brains, { cardId, userText: `执行计划：${c.plan.steps.join("；")}`, reply, since, made: [] })).reply;
   c.updatedAt = now();
   pushChat(state, cardId, "agent", reply);
   return { reply };
@@ -191,12 +194,8 @@ export async function chat(state: AgentState, brains: Brains, cardId: ID, text: 
   const since = state.events.length;
   await agent.prompt(`${history ? `之前的对话：\n${history}\n\n` : ""}${quote ? `用户引用了你说的：「${quote}」\n` : ""}用户：${text}`);
   let reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `${friendlyError(agent.state.errorMessage)}。` : "好的。");
-  // 说到做到：回复里说「已经改了/记下了/取消了」，这一轮就必须真的有状态变化（工具成功执行会写事件）
-  const changed = made.length > 0 || state.events.slice(since).some((e) => e.type !== "evidence_observed" && !e.payload?.claimFailed);
-  if (!changed && /(已经?|帮你|给你)(更新|改好?|调整|记下|记好|取消|重算|重新计算|起草|写好)/.test(reply)) {
-    console.error(`[claim] 对话回复声称做了改动，但这一轮没有任何状态变化：${reply}`);
-    reply += "\n（更正：这一轮我其实还没有改动卡上的内容。需要的话，直接告诉我要改成什么。）";
-  }
+  // 言行一致：发给用户前，把回复和这一轮真实发生的事逐句核对，对不上就改写（见 replyCheck.ts）
+  if (!agent.state.errorMessage) reply = (await checkReply(state, brains, { cardId, userText: text, reply, since, made })).reply;
   c.updatedAt = now();
   pushChat(state, cardId, "agent", reply, made.length ? { proposalIds: made.map((p) => p.id) } : {});
   return { reply, proposals: made };
