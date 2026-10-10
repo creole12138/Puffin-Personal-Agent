@@ -3,6 +3,7 @@ import {
   ruleAssessor, ruleMatcher, type Assessor, type Matcher,
 } from "../core/src/index.ts";
 import type { Api, Model } from "@mariozechner/pi-ai";
+import { countCall } from "./usage.ts";
 
 export interface Brains {
   /** 单次结构化调用（候选卡等轻量任务）；未配置模型时为 null */
@@ -27,6 +28,11 @@ export function makeBrains(env = process.env): Brains {
     return { provider: null, match: ruleMatcher, assess: ruleAssessor, model: null, getApiKey: () => undefined, modelInfo,
       label: cfg.apiKey ? "规则判断（开发模式）" : "未配置模型 key：只能体验示例案例" };
   }
-  const p = new ReplayProvider(createProvider(cfg), env.LLM_CACHE_DIR ?? "data/llm-cache", "record");
-  return { provider: p, match: llmMatcher(p), assess: llmAssessor(p), model: piModelFromConfig(cfg), getApiKey: () => cfg.apiKey, modelInfo, label: `${cfg.provider} / ${cfg.model}` };
+  // 计数挂在真实请求上：结构化调用包在缓存里层（命中缓存不计）；Pi 循环每次请求模型前都会取一次 key
+  const inner = createProvider(cfg);
+  const counted = { id: inner.id, model: inner.model,
+    generateStructured: (req: any) => { countCall(); return inner.generateStructured(req); },
+    generateText: (req: any) => { countCall(); return inner.generateText(req); } } as typeof inner;
+  const p = new ReplayProvider(counted, env.LLM_CACHE_DIR ?? "data/llm-cache", "record");
+  return { provider: p, match: llmMatcher(p), assess: llmAssessor(p), model: piModelFromConfig(cfg), getApiKey: () => { countCall(); return cfg.apiKey; }, modelInfo, label: `${cfg.provider} / ${cfg.model}` };
 }

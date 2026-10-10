@@ -13,6 +13,8 @@ import type { Brains } from "./brains.ts";
 import { chat, describeProposal, makeCandidate, makeDrafter, makeRecomputer, makePlan, pushChat, runPlan } from "./agentOps.ts";
 import { confirmProposal, markCorrected, propose, rollbackTo, verifyClaims, type Proposal } from "../core/src/index.ts";
 
+import { CapError, usage, type Usage } from "./usage.ts";
+
 export class LimitError extends Error {}
 
 /** 全站每日模型调用上限：防止有人反复新建工作区刷掉费用 */
@@ -34,29 +36,46 @@ export class Workspace {
     const next = this.queue.then(async () => {
       const snapshot = structuredClone(this.state);
       const since = this.state.events.length;
+      const u: Usage = { calls: 0, cap: 0 };
       try {
-        const out = await fn(this.state);
+        const out = await usage.run(u, () => fn(this.state));
         verifyClaims(this.state, since);
         await this.store.save(this.state);
         for (const l of this.listeners) l(this.state);
         return out;
       } catch (e) {
         this.state = snapshot;
+        if (e instanceof CapError) throw new LimitError(e.message);
         throw e;
+      } finally {
+        this.charge(u.calls);
       }
     });
     this.queue = next.catch(() => undefined);
     return next;
   }
 
-  private useLLM(n = 1) {
+  private rollDay() {
     const today = new Date().toDateString();
     if (today !== this.day) { this.day = today; this.llmCallsToday = 0; }
-    if (this.llmCallsToday + n > this.limit) throw new LimitError(`今天这个工作区的模型调用次数已用完（${this.limit} 次），明天再来，或者导出状态后在本地继续。`);
     if (globalUsage.day !== today) { globalUsage.day = today; globalUsage.calls = 0; }
-    if (globalUsage.calls + n > GLOBAL_LIMIT) throw new LimitError("今天的体验名额用完了，明天再来；也可以先点「载入一个完整的例子」看看。");
-    globalUsage.calls += n;
+  }
+
+  /** 开始一次要用模型的操作：只检查还有没有余量，并把 n 设为这次的调用上限；按实际调用次数在 run 结束时扣 */
+  private useLLM(n = 1) {
+    this.rollDay();
+    const left = Math.min(this.limit - this.llmCallsToday, GLOBAL_LIMIT - globalUsage.calls);
+    if (this.llmCallsToday >= this.limit) throw new LimitError(`今天这个工作区的模型调用次数已用完（${this.limit} 次），明天再来，或者导出状态后在本地继续。`);
+    if (globalUsage.calls >= GLOBAL_LIMIT) throw new LimitError("今天的体验名额用完了，明天再来；也可以先点「载入一个完整的例子」看看。");
+    const u = usage.getStore();
+    if (u) u.cap = Math.max(u.cap, u.calls + Math.min(n, left));
+  }
+
+  private charge(n: number) {
+    if (!n) return;
+    this.rollDay();
     this.llmCallsToday += n;
+    globalUsage.calls += n;
   }
 
   // ---------- 操作 ----------
@@ -87,7 +106,7 @@ export class Workspace {
       const changes: PremiseChange[] = [];
       const proposals: Proposal[] = [];
       if (Object.keys(s.premises).length) {
-        this.useLLM(3);
+        this.useLLM(7);
         const matches = await this.brains.match(s, ev);
         for (const m of matches) {
           // 新材料里读出的变化也走统一入口：把握高且影响小直接生效，否则先问
@@ -158,7 +177,7 @@ export class Workspace {
       const p = s.premises[premiseId];
       if (!p) throw new Error("前提不存在");
       if (p.value === value) return null;
-      this.useLLM(2);
+      this.useLLM(6);
       const id = newId("evd");
       s.evidence[id] = { id, source: "user_input", ref: "edit", title: "你的修改", excerpt: `${p.label}：${value}`, observedAt: new Date().toISOString() };
       markCorrected(s, premiseId);
@@ -255,7 +274,7 @@ export class Workspace {
   chat(cardId: ID, text: string, quote?: string) {
     return this.run(async (s) => {
       if (!text.trim()) throw new Error("说点什么");
-      this.useLLM(8);
+      this.useLLM(12);
       const r = await chat(s, this.brains, cardId, text, quote?.trim() ? quote.trim().slice(0, 500) : undefined);
       await this.refreshPlans(s, r.proposals);
       return { reply: r.reply };
@@ -263,7 +282,7 @@ export class Workspace {
   }
 
   confirm(proposalId: ID) {
-    return this.run(async (s) => { const p = await confirmProposal(s, proposalId, { recompute: makeRecomputer(this.brains) }); await this.refreshPlans(s, [p]); return p; });
+    return this.run(async (s) => { if (this.brains.provider) this.useLLM(4); const p = await confirmProposal(s, proposalId, { recompute: makeRecomputer(this.brains) }); await this.refreshPlans(s, [p]); return p; });
   }
   cancelAction(actionId: ID) {
     return this.run((s) => {
