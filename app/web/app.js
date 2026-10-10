@@ -275,7 +275,14 @@ const vfFiles = () => VF_FILES.map(([n]) => latestOf(`${VF}/${n}`)).filter(Boole
 function vfList() {
   return vfFiles().map((e) => { const n = e.ref.slice(VF.length + 1), open = S.vEdit === e.ref;
     return `<div class="vf-f"><button class="out-file" data-act="vf-open" data-ref="${esc(e.ref)}">${ICON_FILE}<span>${esc(n)}</span></button>${e.supersedes ? `<span class="tag ok">刚改过</span>` : ""}</div>
+      ${S.vfResult?.ref === e.ref && !open ? vfResultBlock() : ""}
       ${open ? `<div class="vf-ed"><textarea rows="7" data-bind="vText" data-keep="vtext">${esc(S.vText)}</textarea><div class="row" style="gap:8px;justify-content:flex-end"><button class="choice sm" data-act="vf-open" data-ref="${esc(e.ref)}">取消</button><button class="btn sm mint" data-act="vf-save" data-ref="${esc(e.ref)}">保存</button></div></div>` : ""}`; }).join("");
+}
+function vfResultBlock() {
+  const r = S.vfResult;
+  return `<div class="vf-res ${r.warn ? "warn" : ""}">
+    <div class="vf-diff"><div class="s12 faint" style="margin-bottom:4px">已保存，你改了：</div>${r.diff.slice(0, 6).map(([t, l]) => `<div class="d${t === "+" ? "a" : "r"}"><span>${t}</span>${esc(l)}</div>`).join("") || `<div class="s13 faint">只改了空白或格式</div>`}</div>
+    <div class="vf-out">${AV(22, 19)}<span>${esc(r.outcome)}</span>${r.go ? `<button class="more-link" data-act="vf-go" data-id="${r.go}">${r.warn ? "去确认 ›" : "查看 ›"}</button>` : ""}</div></div>`;
 }
 function vfPanel(c) {
   const s = st();
@@ -944,15 +951,24 @@ const actions = {
       openCard(d.result.id);
     });
   },
+  "vf-go"(el) { S.vfModal = false; S.vfResult = null; openCard(el.dataset.id); S.showCard = !!st().proposals && Object.values(st().proposals).some((p) => p.workCardId === el.dataset.id && p.status === "pending") ? true : false; render(); },
   "vf-show"() { S.vfModal = true; S.vEdit = null; render(); },
   "vf-close"() { S.vfModal = false; S.vEdit = null; render(); },
-  "vf-open"(el) { const ref = el.dataset.ref; if (S.vEdit === ref) { S.vEdit = null; } else { S.vEdit = ref; S.vText = latestOf(ref)?.excerpt ?? ""; } render(); },
-  "vf-save": (el) => withBusy("文件夹里有文件变了，我看看", async () => {
+  "vf-open"(el) { const ref = el.dataset.ref; S.vfResult = null; if (S.vEdit === ref) { S.vEdit = null; } else { S.vEdit = ref; S.vText = latestOf(ref)?.excerpt ?? ""; } render(); },
+  "vf-save": (el) => withBusy("文件有变动，我看看会牵动什么", async () => {
     const old = latestOf(el.dataset.ref); if (!old) return;
     if (S.vText.trim() === old.excerpt.trim()) { S.vEdit = null; return toast("内容没有变化"); }
+    const a = old.excerpt.split("\n").map((x) => x.trim()), bb = S.vText.split("\n").map((x) => x.trim());
+    const diff = [...a.filter((x) => x && !bb.includes(x)).map((l) => ["-", l]), ...bb.filter((x) => x && !a.includes(x)).map((l) => ["+", l])];
     const r = await api("/materials", { title: el.dataset.ref.slice(VF.length + 1), text: S.vText, source: "local_folder", ref: old.ref, supersedes: old.id });
-    S.vEdit = null; if (r.result.proposals?.some((p) => p.status === "pending")) S.vfModal = false;
-    if (!reportChanges(r.result.changes, r.result.proposals)) toast("看过了，这次改动没有改变卡上的判断");
+    const st0 = st(), props = (r.result.proposals ?? []), changes = r.result.changes ?? [];
+    const ask = props.find((p) => p.status === "pending"), applied = props.filter((p) => p.status === "applied");
+    let outcome, go = null;
+    if (ask) { outcome = `${ask.change.label}可能从「${ask.change.from}」变成「${ask.change.to}」，牵动了「${st0.workCards[ask.workCardId]?.title ?? "工作卡"}」，等你确认`; go = ask.workCardId; }
+    else if (changes.length) { const pc = changes[0], n = pc.impacts.filter((i) => i.handling !== "unaffected").length; outcome = `${st0.premises[pc.premiseId]?.label}从「${pc.from}」变成「${pc.to}」，${n} 项受影响${applied.length ? "，已自动更新" : ""}`; go = pc.impacts.find((i) => i.handling === "needs_user")?.workCardId ?? pc.impacts[0]?.workCardId ?? null; }
+    else outcome = "看过了，这次改动没有改变卡上的判断";
+    S.vfResult = { ref: old.ref, diff, outcome, go, warn: !!ask };
+    S.vEdit = null;
   }),
   "sim-pr": () => withBusy("Git 仓库里有新动静，我看看", async () => {
     const s = st(), c = s.workCards[S.sel];

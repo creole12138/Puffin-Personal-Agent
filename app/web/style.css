@@ -498,3 +498,13 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .md th{background:var(--soft);font-weight:600}
 .md hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .note-b.md{white-space:normal}
+
+#toast{z-index:80}
+.vf-res{margin:2px 0 10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.vf-res.warn{border-color:var(--amber-line)}
+.vf-diff{padding:10px 12px;font:12.5px/1.7 ui-monospace,Menlo,monospace;background:var(--soft)}
+.vf-diff .da{color:var(--green);background:#e3f6ee;border-radius:4px;padding:0 6px}.vf-diff .dr{color:var(--red);background:#fbe9e3;text-decoration:line-through;border-radius:4px;padding:0 6px;margin-bottom:2px}
+.vf-diff span{display:inline-block;width:14px;font-weight:700;text-decoration:none}
+.vf-out{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:13.5px;line-height:1.6}
+.vf-res.warn .vf-out{background:var(--amber-bg);color:var(--amber)}
+.vf-out span{flex:1}
