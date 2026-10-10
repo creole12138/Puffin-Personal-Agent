@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="237" viewBox="0 0 760 428" font-family="-apple-system,'PingFang SC','Helvetica Neue',sans-serif" font-size="18">
+<rect width="760" height="428" fill="#F4FAF8"/>
+<text x="24" y="34" font-size="19" font-weight="600" fill="#1a1a1a">最看重会话状态，其次是运行时，模型保持可替换</text>
+<rect x="24" y="56" width="712" height="76" rx="8" fill="#fff" stroke="#C9DDD6" stroke-width="1.25"/>
+<text x="44" y="86" font-size="19" font-weight="600" fill="#1a1a1a">交互</text>
+<text x="44" y="112" fill="#666">从对话流变成一张可以直接修改的工作交接卡</text>
+<rect x="24" y="148" width="712" height="76" rx="8" fill="#178A73" fill-opacity="0.14" stroke="#178A73" stroke-width="2"/>
+<text x="44" y="178" font-size="19" font-weight="600" fill="#1a1a1a">会话状态 Session State</text>
+<text x="44" y="204" fill="#1a1a1a">结论带出处；前提一变，自动标出受影响的判断；跨天、跨模型续接</text>
+<rect x="24" y="240" width="712" height="76" rx="8" fill="#178A73" fill-opacity="0.05" stroke="#178A73" stroke-width="1.25"/>
+<text x="44" y="270" font-size="19" font-weight="600" fill="#1a1a1a">运行时 Runtime / Harness</text>
+<text x="44" y="296" fill="#1a1a1a">按需授权；每一步留痕、可回退；在后台盯住文件和日程的变化</text>
+<rect x="24" y="332" width="712" height="76" rx="8" fill="#fff" stroke="#C9DDD6" stroke-width="1.25"/>
+<text x="44" y="362" font-size="19" font-weight="600" fill="#1a1a1a">模型</text>
+<text x="44" y="388" fill="#666">负责理解和判断，越强越好；接口可替换，换更强的模型直接受益</text>
+</svg>
