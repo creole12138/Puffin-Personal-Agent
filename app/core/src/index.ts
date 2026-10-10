@@ -15,3 +15,4 @@ export * from "./harness/prompts.ts";
 export * from "./harness/tools.ts";
 export * from "./engine/snapshot.ts";
 export * from "./engine/proposals.ts";
+export * from "./engine/claims.ts";

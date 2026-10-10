@@ -128,7 +128,7 @@ export interface Action {
   /** Agent 做出的产出（起草的文档、消息正文等），用户可查看 */
   output?: { kind: "document" | "message" | "note"; title: string; body: string; to?: string };
   /** 产出因前提变化被重算前的版本（最近的在后） */
-  outputHistory?: { body: string; reason: string; at: ISOTime }[];
+  outputHistory?: { body: string; reason: string; at: ISOTime; premiseChangeId?: ID }[];
   doneAt?: ISOTime;
   /** 对外消息草稿经用户确认、可以发送的时间（本原型不代发） */
   approvedAt?: ISOTime;
@@ -169,6 +169,8 @@ export interface Reminder {
   kind: "deadline" | "waiting_on_others" | "pending_decision" | "open_loop";
   /** 依赖的前提变化时重新计算 */
   premiseIds: ID[];
+  /** 依赖的前提变了、但没法自动改时，记下原因，界面提示用户重设 */
+  stale?: string;
 }
 
 export interface WorkCard {

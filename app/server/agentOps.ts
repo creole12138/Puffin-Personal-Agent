@@ -188,8 +188,15 @@ export async function chat(state: AgentState, brains: Brains, cardId: ID, text: 
       "用户说某件还没做的事不用做了（比如不用通知某人、某封更正不发了），用 cancel_action 取消对应动作，并在回复里确认一句。",
       "需要起草就起草；只是提问就直接回答，不要调用工具。",
     ].join("\n") });
+  const since = state.events.length;
   await agent.prompt(`${history ? `之前的对话：\n${history}\n\n` : ""}${quote ? `用户引用了你说的：「${quote}」\n` : ""}用户：${text}`);
-  const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `${friendlyError(agent.state.errorMessage)}。` : "好的。");
+  let reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `${friendlyError(agent.state.errorMessage)}。` : "好的。");
+  // 说到做到：回复里说「已经改了/记下了/取消了」，这一轮就必须真的有状态变化（工具成功执行会写事件）
+  const changed = made.length > 0 || state.events.slice(since).some((e) => e.type !== "evidence_observed" && !e.payload?.claimFailed);
+  if (!changed && /(已经?|帮你|给你)(更新|改好?|调整|记下|记好|取消|重算|重新计算|起草|写好)/.test(reply)) {
+    console.error(`[claim] 对话回复声称做了改动，但这一轮没有任何状态变化：${reply}`);
+    reply += "\n（更正：这一轮我其实还没有改动卡上的内容。需要的话，直接告诉我要改成什么。）";
+  }
   c.updatedAt = now();
   pushChat(state, cardId, "agent", reply, made.length ? { proposalIds: made.map((p) => p.id) } : {});
   return { reply, proposals: made };

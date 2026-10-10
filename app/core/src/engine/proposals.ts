@@ -96,9 +96,15 @@ async function apply(state: AgentState, prop: Proposal, recompute?: Recomputer) 
     const act = Object.values(state.actions).find((a) => a.compensationFor === d.forActionId && !a.output);
     if (act) { act.output = { kind: "message", title: d.title, body: d.body, to: d.to }; act.label = `给 ${d.to} 的更正：${d.title}`; d.actionId = act.id; }
   }
+  // 时间线说了「起草了一份更正」，就必须真有正文：预先起草没覆盖到的，用模板补上
+  for (const act of Object.values(state.actions)) {
+    if (!act.compensationFor || act.output || act.status !== "planned") continue;
+    const t = await templateDrafter({ state, actionId: act.compensationFor, premiseLabel: prop.change.label, from: prop.change.from, to: prop.change.to });
+    act.output = { kind: "message", title: t.title, body: t.body, to: t.to };
+  }
   if (prop.source !== "user" && prop.mode === "auto") {
     emit(state, { type: "premise_changed", actor: "agent", workCardId: prop.workCardId, visibleInTimeline: true,
-      summary: `我推断${prop.change.label}也变成了 ${prop.change.to}（${prop.reason}），已先按这个更新，可以随时纠正`, payload: { proposalId: prop.id } });
+      summary: `我推断${prop.change.label}也变成了 ${prop.change.to}（${prop.reason}），已先按这个更新，可以随时纠正`, payload: { proposalId: prop.id, claim: { kind: "premise_value", premiseId: prop.change.premiseId, value: prop.change.to } } });
   }
 }
 

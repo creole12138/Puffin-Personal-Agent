@@ -107,14 +107,14 @@ export interface ApplyChangeInput {
 
 const squash = (t: string) => t.replace(/\s+/g, "");
 /** 重算并校验：新正文必须和旧的不同、且写进了新值；不过关重试一次。成功才替换产出 */
-async function recomputeOutput(state: AgentState, a: Action, label: string, from: string, to: string, recompute: Recomputer): Promise<boolean> {
+async function recomputeOutput(state: AgentState, a: Action, label: string, from: string, to: string, recompute: Recomputer, premiseChangeId: ID): Promise<boolean> {
   const old = a.output!;
   for (let i = 0; i < 2; i++) {
     try {
       const r = await recompute({ state, actionId: a.id, premiseLabel: label, from, to });
       const body = r.body?.trim();
       if (!body || body === old.body.trim() || !squash(body).includes(squash(to))) continue;
-      (a.outputHistory ??= []).push({ body: old.body, reason: `${label}：${from} → ${to}`, at: now() });
+      (a.outputHistory ??= []).push({ body: old.body, reason: `${label}：${from} → ${to}`, at: now(), premiseChangeId });
       a.output = { ...old, body };
       return true;
     } catch (e) { console.warn(`重算「${a.label}」失败：${(e as Error).message}`); }
@@ -185,14 +185,14 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
         state.actions[comp.id] = comp;
         state.workCards[a.workCardId]?.actionIds.push(comp.id);
         emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
-          summary: `「${a.label}」你已经发出去了；我起草了一份更正，等你确认`, payload: { actionId: comp.id, compensationFor: a.id, premiseChangeId: change.id } });
+          summary: `「${a.label}」你已经发出去了；我起草了一份更正，等你确认`, payload: { actionId: comp.id, compensationFor: a.id, premiseChangeId: change.id, claim: { kind: "has_output", actionId: comp.id } } });
       } else if (i.handling === "auto_updated") {
         if (!a.output) {
           emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
             summary: `「${a.label}」之后按新的${premise.label}（${input.to}）来做`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id } });
-        } else if (input.recompute && await recomputeOutput(state, a, premise.label, from, input.to, input.recompute)) {
+        } else if (input.recompute && await recomputeOutput(state, a, premise.label, from, input.to, input.recompute, change.id)) {
           emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
-            summary: `「${a.label}」已按新的${premise.label}（${input.to}）重新计算`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id } });
+            summary: `「${a.label}」已按新的${premise.label}（${input.to}）重新计算`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id, claim: { kind: "output_recomputed", actionId: a.id, premiseChangeId: change.id, mustInclude: input.to } } });
         } else {
           // 没能真正重算：不假装更新，先暂停，产出保持原样并标明依据已过时
           a.status = "paused";
@@ -200,6 +200,22 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
             summary: `「${a.label}」还是按 ${from} 算的，我没能自动重算，先暂停；可以在对话里让我重算`, payload: { actionId: a.id, status: "paused", recomputeFailed: true, premiseChangeId: change.id } });
         }
       }
+    }
+  }
+  // 提醒：时间或理由里写着旧值的，直接换成新值；否则标出来请用户重设，不假装已调整
+  for (const i of impacts) {
+    if (i.kind !== "reminder" || i.handling !== "auto_updated") continue;
+    const r = state.workCards[i.workCardId]?.reminders.find((x) => x.id === i.id);
+    if (!r) continue;
+    const before = `${r.at}｜${r.reason}`;
+    if (from && (r.at.includes(from) || r.reason.includes(from))) {
+      r.at = r.at.split(from).join(input.to); r.reason = r.reason.split(from).join(input.to); r.stale = undefined;
+      emit(state, { type: "action_status_changed", actor: "agent", workCardId: i.workCardId,
+        summary: `提醒已按新的${premise.label}（${input.to}）调整：${r.reason}`, payload: { reminderId: r.id, premiseChangeId: change.id, claim: { kind: "reminder_changed", reminderId: r.id, before } } });
+    } else {
+      r.stale = `${premise.label}从 ${from} 变成了 ${input.to}`;
+      emit(state, { type: "action_status_changed", actor: "agent", workCardId: i.workCardId,
+        summary: `提醒「${r.reason}」依赖的${premise.label}变了，时间可能要跟着调整，我还没改`, payload: { reminderId: r.id, premiseChangeId: change.id } });
     }
   }
   for (const card of Object.values(state.workCards)) {
@@ -235,7 +251,7 @@ export function resolveDecision(state: AgentState, decisionId: ID, r: Resolution
       if (a && a.status === "paused") {
         a.status = "cancelled";
         emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
-          summary: `「${a.label}」不再需要，已取消`, payload: { actionId: a.id, status: "cancelled" } });
+          summary: `「${a.label}」不再需要，已取消`, payload: { actionId: a.id, status: "cancelled", claim: { kind: "action_status", actionId: a.id, status: "cancelled" } } });
       }
     }
   } else {

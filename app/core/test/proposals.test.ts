@@ -83,3 +83,28 @@ test("前提变了：由它算出的产出要真的重算；重算不了就暂�
   assert.equal(s2.actions.a_costTable!.status, "paused");
   assert.ok(!s2.events.some((e) => /成本对比表.*重新计算/.test(e.summary) && !/没能/.test(e.summary)));
 });
+
+test("说到做到：时间线声称完成但状态核对不到的事件会被撤下并如实更正", async () => {
+  const { emit, verifyClaims } = await import("../src/index.ts");
+  const s = seedQ4();
+  const since = s.events.length;
+  emit(s, { type: "action_status_changed", actor: "agent", workCardId: "wc_alex", summary: "「成本对比表」已按新的预算（30 万）重新计算",
+    payload: { claim: { kind: "output_recomputed", actionId: "a_costTable", premiseChangeId: "pc_x", mustInclude: "30 万" } } });
+  emit(s, { type: "action_status_changed", actor: "agent", workCardId: "wc_alex", summary: "「发给小李的说明」已取消",
+    payload: { claim: { kind: "action_status", actionId: "a_noteLi", status: s.actions.a_noteLi!.status } } });
+  const bad = verifyClaims(s, since);
+  assert.equal(bad.length, 1);
+  assert.equal(bad[0]!.visibleInTimeline, false);
+  assert.ok(s.events.at(-1)!.summary.includes("没有真正做成"));
+});
+
+test("前提变化：时间线上的「已完成」全部经得起核对；更正都有正文；提醒按新值改或标出待重设", async () => {
+  const { verifyClaims } = await import("../src/index.ts");
+  const s = seedQ4();
+  const since = s.events.length;
+  const p = await propose(s, { premiseId: "pr_budget", to: "30 万", source: "material", evidenceId: ev(s), reason: "预算表 v3", confidence: "high", assess: ruleAssessor, drafter: async () => { throw new Error("模型挂了"); } });
+  await confirmProposal(s, p!.id, { recompute: async ({ state, actionId, to }: any) => ({ body: state.actions[actionId].output.body.replace(/50 万/g, to) }) });
+  assert.deepEqual(verifyClaims(s, since), []);
+  for (const a of Object.values(s.actions)) if (a.compensationFor) assert.ok(a.output?.body, "说了起草更正就要有正文");
+  for (const r of Object.values(s.workCards).flatMap((w) => w.reminders)) if (r.premiseIds.includes("pr_budget")) assert.ok(!r.reason.includes("50 万") || r.stale);
+});

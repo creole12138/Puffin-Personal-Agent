@@ -11,7 +11,7 @@ import {
 } from "../core/src/index.ts";
 import type { Brains } from "./brains.ts";
 import { chat, describeProposal, makeCandidate, makeDrafter, makeRecomputer, makePlan, pushChat, runPlan } from "./agentOps.ts";
-import { confirmProposal, markCorrected, propose, rollbackTo, type Proposal } from "../core/src/index.ts";
+import { confirmProposal, markCorrected, propose, rollbackTo, verifyClaims, type Proposal } from "../core/src/index.ts";
 
 export class LimitError extends Error {}
 
@@ -33,8 +33,10 @@ export class Workspace {
   run<T>(fn: (s: AgentState) => Promise<T> | T): Promise<T> {
     const next = this.queue.then(async () => {
       const snapshot = structuredClone(this.state);
+      const since = this.state.events.length;
       try {
         const out = await fn(this.state);
+        verifyClaims(this.state, since);
         await this.store.save(this.state);
         for (const l of this.listeners) l(this.state);
         return out;
@@ -270,7 +272,7 @@ export class Workspace {
       a.status = "cancelled";
       const orig = a.compensationFor ? s.actions[a.compensationFor] : undefined;
       const name = orig ? `「${orig.label}」的更正` : `「${a.label}」`;
-      emit(s, { type: "action_status_changed", actor: "user", workCardId: a.workCardId, summary: `你决定不发${name}`, payload: { actionId: a.id, status: "cancelled" } });
+      emit(s, { type: "action_status_changed", actor: "user", workCardId: a.workCardId, summary: `你决定不发${name}`, payload: { actionId: a.id, status: "cancelled", claim: { kind: "action_status", actionId: a.id, status: "cancelled" } } });
       pushChat(s, a.workCardId, "agent", `好，${name}不发了，已经从待办里拿掉。之后需要的话跟我说一声，我再起草。`);
       return a;
     });
