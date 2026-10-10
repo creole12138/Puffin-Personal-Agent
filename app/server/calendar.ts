@@ -81,7 +81,7 @@ async function assertPublicHttps(raw: string): Promise<URL> {
 
 async function fetchICS(url: string): Promise<CalEvent[]> {
   const u = await assertPublicHttps(url);
-  const res = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { accept: "text/calendar" } });
+  const res = await fetch(u, { signal: AbortSignal.timeout(15000), cache: "no-store", headers: { accept: "text/calendar", "cache-control": "no-cache", pragma: "no-cache" } });
   if (!res.ok) {
     const google = /calendar\.google\.com/.test(u.hostname);
     if ((res.status === 404 || res.status === 403) && google) throw new Error(`Google 返回 ${res.status}：这个链接本身打不开。请确认复制的是「iCal 格式的私密地址」（不是公开地址），且日历不是公司账号限制外部访问的；新建的日历可能要等一会儿才生效`);
@@ -132,7 +132,8 @@ export class CalendarWatcher {
       if (changes.length) await ws.addMaterial({ title: `日历变化${pid ? `（${ws.state.projects[pid]?.name ?? ""}）` : ""}`, text: changes.join("\n"), source: "calendar", ref: pid ? `calendar:${pid}` : "calendar" });
       all.push(...changes);
     }
-    return { changes: all };
+    const latest = gs.flatMap((g) => Object.values((ws.state.grants[g.id]?.filter.snapshot ?? {}) as Snapshot)).filter(inWindow).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 3).map((e) => `${e.summary} ${e.start}`);
+    return { changes: all, latest };
   }
 
   start() {
