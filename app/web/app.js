@@ -571,7 +571,7 @@ function decisionsBlock(c) {
 function actionsBlock(c) {
   const s = st();
   return `<div><div class="lbl" style="margin-bottom:6px">动作与产出</div><div class="list">${c.actionIds.map((id) => s.actions[id]).filter(Boolean).map((a) => {
-    const [l, cls] = a.compensationFor ? ["等你确认", "warn"] : a.output?.kind === "message" && a.status === "planned" ? ["草稿 · 等你发送", "info"] : ACT[a.status];
+    const [l, cls] = a.status === "cancelled" || a.status === "done" ? ACT[a.status] : a.compensationFor && !a.approvedAt ? ["等你确认", "warn"] : a.output?.kind === "message" && a.status === "planned" ? ["草稿 · 等你发送", "info"] : ACT[a.status];
     const open = S.openDoc.has(a.id);
     const o = a.output, ext = a.external ? ` <span class="tag muted">对外</span>` : "";
     let name, body = "";
