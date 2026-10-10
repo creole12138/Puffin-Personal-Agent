@@ -87,6 +87,7 @@ export function validateDraft(state: AgentState, d: WorkCardDraft, allowedEviden
   for (const q of d.openQuestions) {
     const all = `${q.question} ${q.options.join(" ")}`;
     if (/哪一?年|年份|哪年|\d{4}\s*年|星期几|周几|是不是今年|今年还是/.test(all)) errs.push(`问题「${q.question}」在问年份或星期：这些按今天的日期推算即可，直接用推算出的值，删掉这个问题`);
+    if (/(能|可以|是否|要不要)?(提供|补充|上传|发来|给出).{0,8}(邮件|会议纪要|纪要|资料|材料|日历)/.test(q.question)) errs.push(`问题「${q.question}」在要用户补充资料：有什么材料就用什么来整理，删掉这个问题，也不要把「提供资料」写成下一步或等待项`);
     if (/(「你」|你本人|是指你|指的是你|负责人是你吗)/.test(all)) errs.push(`问题「${q.question}」在确认「你」是谁：材料里的「你」就是用户本人，删掉这个问题`);
   }
   if (hasCycle(d)) errs.push("决策之间的依赖形成了环");
