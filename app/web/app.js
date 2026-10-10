@@ -108,7 +108,13 @@ const decisionMain = (c) => c.decisionIds.map((id) => st().decisions[id]).filter
 const isExample = () => Boolean(st()?.workCards.wc_alex && st().premises.pr_budget);
 
 // ---------- 渲染 ----------
+function syncHash() {
+  if (!S.wsId || !S.ws) return;
+  const h = S.view === "card" && S.sel ? `#card/${S.sel}` : S.view === "project" && S.proj ? `#project/${S.proj}` : "";
+  if (location.hash !== h) history.replaceState(null, "", location.pathname + h);
+}
 function render() {
+  syncHash();
   const f = document.activeElement, keep = f?.dataset?.keep, sel = keep ? [f.selectionStart, f.selectionEnd] : null;
   const viewKey = `${S.view}:${S.sel}:${S.proj}`, sameView = viewKey === S._viewKey; S._viewKey = viewKey;
   const scrollMain = sameView ? $app.querySelector(".main")?.scrollTop : 0, scrollMsgs = $app.querySelector(".msgs");
@@ -1262,7 +1268,14 @@ async function boot() {
   S.wsId = m?.[1] ?? null; S.ws = null; render();
   if (!S.wsId) return;
   S.lastSeen = store.get(`seen:${S.wsId}`);
-  try { await api("", undefined, "GET"); connectStream(); render(); }
+  try {
+    await api("", undefined, "GET");
+    // 刷新后回到刚才的页面（地址里的 #card/… #project/…）
+    const h = location.hash.match(/^#(card|project)\/([\w-]+)$/), s0 = st();
+    if (h?.[1] === "card" && s0.workCards[h[2]]) { S.view = "card"; S.sel = h[2]; }
+    else if (h?.[1] === "project" && s0.projects[h[2]]) { S.view = "project"; S.proj = h[2]; }
+    connectStream(); render();
+  }
   catch (e) { $app.innerHTML = `<div class="landing"><h2>${esc(e.message)}</h2><p><a href="/">重新开始</a></p></div>`; }
   // 记录"上次来访"：离开页面时写入，供下次回访首页计算"自你上次离开"
   addEventListener("pagehide", () => store.set(`seen:${S.wsId}`, new Date().toISOString()));
