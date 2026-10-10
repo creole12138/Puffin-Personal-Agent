@@ -751,8 +751,17 @@ function projectView() {
     <div><div class="lbl">项目</div><div style="font-size:28px;font-weight:700;margin-top:2px">${esc(p.name)}</div>${p.goal ? `<div style="font-size:14px;color:var(--ink2);margin-top:6px">目标：${esc(p.goal)}</div>` : ""}</div>
     ${p.premiseIds.length ? `<div class="sec-h">共享前提条件<span>${p.premiseIds.filter((id) => s.premises[id]).length}</span><small>项目里各项工作共用，一变就会牵动相关的事</small></div><div class="grid3">${p.premiseIds.map((id) => s.premises[id]).filter(Boolean).map((pr) => {
       const was = pr.history.at(-1)?.value, n = refs(pr.id);
-      return `<div class="prem ${was && was !== pr.value ? "changed" : pr.confirmed ? "" : "unconf"}"><div class="lbl">${esc(pr.label)}</div><div style="font-size:16px;margin-top:4px">${esc(pr.value)}${was && was !== pr.value ? `<span class="s12 muted">（原 ${esc(was)}）</span>` : ""}</div>
-        <div class="s11" style="margin-top:6px;color:${pr.confirmed ? "var(--ink3)" : "var(--red)"}">${pr.confirmed ? "" : "未确认 · "}被 ${n} 项工作引用</div></div>`; }).join("")}</div>` : ""}
+      const evs = pr.evidenceIds.map((id) => s.evidence[id]).filter(Boolean), last = evs.at(-1), byUser = last?.ref === "edit";
+      const prevH = pr.history.at(-1), prevDocs = (prevH?.evidenceIds ?? []).map((id) => s.evidence[id]).filter((e) => e && e.ref !== "edit" && e.ref !== "chat");
+      const srcDoc = byUser ? prevDocs.at(-1) : evs.filter((e) => e.ref !== "edit" && e.ref !== "chat").at(-1);
+      const src = byUser ? `你改的${srcDoc && was && was !== pr.value ? ` · 《${esc(srcDoc.title)}》里是 ${esc(was)}，以你的为准` : ""}` : srcDoc ? `来自《${esc(srcDoc.title)}》` : "";
+      if (S.editing === pr.id) return `<div class="prem editing"><div class="lbl">${esc(pr.label)}</div>
+        <input type="text" value="${esc(S.editVal)}" data-bind="editVal" data-keep="edit" aria-label="${esc(pr.label)}的新值">
+        <div class="row" style="gap:6px;margin-top:8px"><button class="btn sm mint" data-act="edit-save" data-id="${pr.id}">保存</button><button class="btn sm" data-act="edit-cancel">取消</button></div>
+        <div class="s11 faint" style="margin-top:6px">改了之后我会检查引用它的 ${n} 项工作</div></div>`;
+      return `<div class="prem ${was && was !== pr.value ? "changed" : pr.confirmed ? "" : "unconf"}"><button class="pen" data-act="edit" data-id="${pr.id}" aria-label="修改${esc(pr.label)}">${ICON_PEN}<span>修改</span></button><div class="lbl">${esc(pr.label)}</div><div style="font-size:16px;margin-top:4px">${esc(pr.value)}</div>
+        ${src ? `<div class="s11 faint" style="margin-top:4px">${src}</div>` : ""}
+        <div class="s11" style="margin-top:4px;color:${pr.confirmed ? "var(--ink3)" : "var(--red)"}">${pr.confirmed ? "" : "未确认 · "}被 ${n} 项工作引用</div></div>`; }).join("")}</div>` : ""}
     ${changed.length ? `<div class="amber">${changed.map((pc) => `${esc(s.premises[pc.premiseId]?.label)}变化影响了本项目 ${new Set(pc.impacts.filter((i) => i.handling !== "unaffected").map((i) => i.workCardId)).size} 项工作：${pc.impacts.filter((i) => i.handling === "needs_user").length} 项需要你决定，${pc.impacts.filter((i) => i.handling === "auto_updated").length} 项已自动调整`).join("；")}</div>` : ""}
     <div class="row"><div class="sec-h" style="flex-grow:1;margin:0">工作<span>${cs.length}</span></div><button class="btn outline-mint" data-act="new-in-proj">＋ 在这个项目里开始新对话</button></div>
     <div class="grid2" style="gap:12px">${cs.map((c) => { const d = decisionMain(c);

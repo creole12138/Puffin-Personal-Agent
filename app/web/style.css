@@ -574,3 +574,10 @@ button.who:hover .home-ic{color:var(--mint)}
 .sec-h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:-4px}
 .sec-h span{font-size:11px;font-weight:500;color:var(--ink4);background:var(--line3);border-radius:999px;padding:0 7px;line-height:18px}
 .sec-h small{font-size:12px;font-weight:400;color:var(--ink4)}
+
+.prem{position:relative}
+.prem .pen{position:absolute;right:10px;top:10px;display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 8px;border:1px solid transparent;background:transparent;border-radius:8px;color:var(--ink4);font-size:12px;cursor:pointer}
+.prem .pen span{display:none}
+.prem:hover .pen{color:var(--mint);border-color:var(--line2);background:#fff}.prem:hover .pen span{display:inline}
+.prem.editing{border-color:var(--mint)}
+.prem.editing input{width:100%;height:34px;margin-top:6px;border:1px solid var(--mint);border-radius:8px;padding:0 10px;font:inherit;font-size:15px}
