@@ -520,3 +520,11 @@ button.who:hover{opacity:.8}
 
 .who .home-ic{color:var(--ink3);margin-right:2px}
 button.who:hover .home-ic{color:var(--mint)}
+
+/* 指向侧栏某件事的提示气泡 */
+.task.hinted{box-shadow:0 0 0 2px var(--mint) inset;background:var(--green-bg)}
+.hint-pop{position:fixed;transform:translateY(-50%);z-index:60;width:230px;background:var(--ink);color:#fff;font-size:13px;line-height:1.6;padding:10px 32px 10px 12px;border-radius:10px;box-shadow:0 8px 24px rgba(27,43,51,.2);animation:hintin .3s ease-out}
+.hint-pop::before{content:"";position:absolute;left:-5px;top:50%;margin-top:-6px;width:12px;height:12px;background:var(--ink);transform:rotate(45deg);border-radius:2px}
+.hint-pop .x-btn{position:absolute;right:4px;top:4px;width:24px;height:24px;color:#fff;opacity:.7}
+.hint-pop .x-btn:hover{background:rgba(255,255,255,.15);opacity:1;color:#fff}
+@keyframes hintin{from{opacity:0;margin-left:-6px}to{opacity:1;margin-left:0}}

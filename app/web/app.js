@@ -84,6 +84,9 @@ function render() {
   const atBottom = scrollMsgs ? scrollMsgs.scrollHeight - scrollMsgs.scrollTop - scrollMsgs.clientHeight < 40 : true;
   $app.innerHTML = S.wsId ? shell() : landing();
   if (S.wsId && S.preview) $app.insertAdjacentHTML("beforeend", previewModal());
+  const ht = S.hint && $app.querySelector(".task.hinted");
+  if (ht) { const r = ht.getBoundingClientRect();
+    $app.insertAdjacentHTML("beforeend", `<div class="hint-pop" role="status" style="left:${r.right + 14}px;top:${r.top + r.height / 2}px">${esc(S.hint.text)}<button class="x-btn" data-act="hint-x" aria-label="知道了"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`); }
   if (S.wsId && S.scene) $app.insertAdjacentHTML("beforeend", sceneModal());
   if (S.wsId && S.vfModal) $app.insertAdjacentHTML("beforeend", vfModal());
   if (S.wsId && S.mats) $app.insertAdjacentHTML("beforeend", matsModal());
@@ -141,7 +144,7 @@ function shell() {
 
 function nav() {
   const s = st(), projects = Object.values(s.projects), loose = cardsOf(null);
-  const taskBtn = (c) => `<button class="task ${S.view === "card" && S.sel === c.id ? "on" : ""}" data-act="open" data-id="${c.id}">${esc(c.title)}${c.stage === "candidate" ? "" : `<span class="st"> · ${STAGE[c.stage][0]}</span>`}${needsYou(c) ? `<span class="flag"> · 待决定</span>` : ""}</button>`;
+  const taskBtn = (c) => `<button class="task ${S.view === "card" && S.sel === c.id ? "on" : ""} ${S.hint?.cardId === c.id ? "hinted" : ""}" data-act="open" data-id="${c.id}">${esc(c.title)}${c.stage === "candidate" ? "" : `<span class="st"> · ${STAGE[c.stage][0]}</span>`}${needsYou(c) ? `<span class="flag"> · 待决定</span>` : ""}</button>`;
   const grants = Object.values(s.grants).filter((g) => !g.revokedAt && g.source !== "user_input");
   const cal = grants.find((g) => g.source === "calendar");
   const mats = Object.values(s.evidence).filter((e) => !["chat", "edit"].includes(e.ref)).length;
@@ -900,14 +903,15 @@ const openCard = (id) => { S.sel = id; S.view = "card"; S.why = false; S.showCar
 const actions = {
   async create() { const r = await api("/api/workspaces", {}); go(r.id); },
   home() { S.view = "home"; S.sel = null; S.proj = null; render(); },
-  open(el) { openCard(el.dataset.id); render(); },
+  open(el) { if (S.hint?.cardId === el.dataset.id) S.hint = null; openCard(el.dataset.id); render(); },
+  "hint-x"() { S.hint = null; render(); },
   project(el) { S.proj = el.dataset.id; S.view = "project"; render(); },
   demo() { S.view = "demo"; S.tour = 0; S.tourDecided = false; render(); },
   "demo-flip"() { S.demoFlip = !S.demoFlip; render(); },
   "start-free"() { const i = $app.querySelector('[data-keep="ask"]'); i?.focus(); i?.scrollIntoView({ block: "center", behavior: "smooth" }); },
   "cal-open"() { S.calOpen = !S.calOpen; render(); if (S.calOpen) $app.querySelector('[data-keep="cal"]')?.focus(); },
   prompt(el) { S.ask = `${el.dataset.v}：`; render(); $app.querySelector('[data-keep="ask"]')?.focus(); },
-  example: () => withBusy("我把例子摆好", async () => { await api("/example", {}); S.lastSeen = "2026-09-28T16:00:00+08:00"; S.view = "home"; toast("载入了 Q4 规划的例子。点「和 Alex 对齐」试试前提变化"); }),
+  example: () => withBusy("我把例子摆好", async () => { await api("/example", {}); S.lastSeen = "2026-09-28T16:00:00+08:00"; S.view = "home"; S.hint = { cardId: "wc_alex", text: "从这里开始：点开它，试试预算变了会牵动什么" }; }),
   unattach(el) { S.attach.splice(Number(el.dataset.i), 1); render(); },
   uncand(el) { S.candAttach.splice(Number(el.dataset.i), 1); render(); },
   async tell() {
