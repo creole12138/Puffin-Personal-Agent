@@ -82,7 +82,12 @@ async function assertPublicHttps(raw: string): Promise<URL> {
 async function fetchICS(url: string): Promise<CalEvent[]> {
   const u = await assertPublicHttps(url);
   const res = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { accept: "text/calendar" } });
-  if (!res.ok) throw new Error(`日历链接打不开（${res.status}）`);
+  if (!res.ok) {
+    const google = /calendar\.google\.com/.test(u.hostname);
+    if ((res.status === 404 || res.status === 403) && google) throw new Error(`Google 返回 ${res.status}：这个链接本身打不开。请确认复制的是「iCal 格式的私密地址」（不是公开地址），且日历不是公司账号限制外部访问的；新建的日历可能要等一会儿才生效`);
+    if (res.status === 404 || res.status === 403) throw new Error(`日历链接打不开（${res.status}）：可以先把链接粘到浏览器的无痕窗口里试试，能下载到 .ics 文件才能连接`);
+    throw new Error(`日历链接打不开（${res.status}）`);
+  }
   const text = await res.text();
   if (text.length > 5_000_000) throw new Error("日历太大");
   if (!text.includes("BEGIN:VCALENDAR")) throw new Error("这个链接返回的不是日历（.ics）");
