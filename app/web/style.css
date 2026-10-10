@@ -511,3 +511,9 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 
 .al-more{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:6px 0 0;font:inherit;font-size:13px;color:var(--mint);cursor:pointer}
 .al-more:hover{color:var(--mint-d)}
+
+button.who{border:0;background:none;color:var(--ink);padding:4px 8px 4px 0;font:inherit;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:10px}
+button.who:hover{opacity:.8}
+.homebtn{display:flex;align-items:center;gap:8px;border:0;background:none;padding:8px 10px;margin:0 -4px 6px;border-radius:10px;font:inherit;font-size:14px;color:var(--ink2);cursor:pointer;text-align:left}
+.homebtn:hover{background:var(--line3);color:var(--ink)}
+.homebtn.on{background:var(--green-bg);color:var(--green);font-weight:500}
