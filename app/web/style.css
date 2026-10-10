@@ -531,3 +531,12 @@ button.who:hover .home-ic{color:var(--mint)}
 
 .own{display:flex;gap:8px;margin-top:10px}
 .own input{flex:1;height:38px;border:1px solid var(--mint);border-radius:10px;padding:0 12px;font:inherit;font-size:14px}
+
+.tk.rb .tk-dot::after{content:"";position:absolute;right:-3px;top:-3px;width:9px;height:9px;border-radius:50%;background:var(--blue);border:2px solid #fff}
+.tk-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink3);align-items:center}
+.tk-legend span{display:inline-flex;align-items:center;gap:5px}
+.lg{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid}
+.lg.agent{border-color:var(--mint)}.lg.user{border-color:var(--ink2)}.lg.warn{border-color:#d29a3a}
+.lg.rb{background:var(--blue);border-color:var(--blue);width:8px;height:8px}
+.lg{flex:none;box-sizing:border-box}.lg.rb{width:9px;height:9px;border-width:0}
+.tk-legend .lg{width:10px!important;height:10px!important;padding:0!important;min-width:0}.tk-legend .lg.rb{width:9px!important;height:9px!important}

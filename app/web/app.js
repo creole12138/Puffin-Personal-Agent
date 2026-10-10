@@ -635,7 +635,7 @@ function rippleView(c, pc) {
 const EV_ICON = {
   card_created: `<path d="M12 5v14M5 12h14"/>`,
   decision_made: `<path d="m5 12 5 5 9-10"/>`,
-  plan_confirmed: `<path d="m5 12 5 5 9-10"/>`,
+  plan_confirmed: `<path d="M8 5v14l11-7z"/>`,
   external_action_executed: `<path d="M5 12h13M13 6l6 6-6 6"/>`,
   premise_changed: `<path d="M12 7v6M12 17h.01"/>`,
   rolled_back: `<path d="M4 10h11a5 5 0 0 1 0 10H9"/><path d="m8 6-4 4 4 4"/>`,
@@ -643,24 +643,29 @@ const EV_ICON = {
 const evIcon = (t) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${EV_ICON[t] ?? `<circle cx="12" cy="12" r="3"/>`}</svg>`;
 const cardEvents = (s, c) => s.events.filter((e) => e.visibleInTimeline && (e.workCardId === c.id || (e.type === "premise_changed" && c.premiseIds.includes(e.payload.premiseId))));
 const shortDate = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const TRACK_TYPES = new Set(["card_created", "decision_made", "plan_confirmed", "external_action_executed", "premise_changed", "rolled_back"]);
+function snapDiff(c, snap) {
+  const s = st(), rows = [], curD = decisionMain(c)?.statement, oldD = snap.decisions.find((d) => d.status !== "superseded")?.statement;
+  if (oldD !== curD) rows.push(["关键决策", oldD ?? "—", curD ?? "—"]);
+  snap.premises.forEach((p) => { const now = s.premises[p.id]?.value; if (now && now !== p.value) rows.push([p.label, p.value, now]); });
+  if ((snap.nextStep || "") !== (c.nextStep || "")) rows.push(["下一步", snap.nextStep || "—", c.nextStep || "—"]);
+  return rows;
+}
 function trackStrip(c) {
-  const s = st(), evs = cardEvents(s, c); if (!evs.length) return "";
+  const s = st(), evs = cardEvents(s, c).filter((e) => TRACK_TYPES.has(e.type)); if (!evs.length) return "";
   const pick = S.tlEvent ? evs.find((e) => e.id === S.tlEvent) : null;
-  const dot = (e) => `<button class="tk ${pick?.id === e.id ? "on" : ""} t-${e.type === "premise_changed" ? "warn" : e.actor === "user" ? "user" : "agent"}" data-act="tk" data-id="${e.id}" aria-label="${esc(e.summary)}">
+  const dot = (e) => `<button class="tk ${pick?.id === e.id ? "on" : ""} ${e.payload.snapshot && snapDiff(c, e.payload.snapshot).length ? "rb" : ""} t-${e.type === "premise_changed" ? "warn" : e.actor === "user" ? "user" : "agent"}" data-act="tk" data-id="${e.id}" aria-label="${esc(e.summary)}">
       <span class="tk-dot">${evIcon(e.type)}</span><span class="tk-d">${shortDate(e.at)}</span><span class="tk-tip">${esc(e.summary)}</span></button>`;
   return `<div class="track"><div class="track-row">${evs.map(dot).join("")}<span class="tk now"><span class="tk-dot"></span><span class="tk-d">现在</span></span></div>
-    ${pick ? trackDetail(c, pick) : `<div class="s12 faint">这张卡经历的 ${evs.length} 个关键节点，点一个看看当时的样子</div>`}</div>`;
+    ${pick ? trackDetail(c, pick) : `<div class="tk-legend"><span><i class="lg agent"></i>云朵小管家做的</span><span><i class="lg user"></i>你做的</span><span><i class="lg warn"></i>条件变化</span><span><i class="lg rb"></i>可以回到那时</span><span class="faint">· 点节点看当时的样子</span></div>`}</div>`;
 }
 function trackDetail(c, e) {
   const s = st(), snap = e.payload.snapshot, who = { user: "你", agent: "云朵小管家", watcher: "云朵小管家" }[e.actor];
   const head = `<div class="tkd-h"><span><b>${esc(e.summary)}</b><span class="faint s12"> · ${who} · ${timeAgo(e.at)}</span></span><button class="choice sm" data-act="tk" data-id="${e.id}">收起</button></div>`;
-  if (!snap) return `<div class="tkd">${head}</div>`;
-  const rows = [], curD = decisionMain(c)?.statement, oldD = snap.decisions.find((d) => d.status !== "superseded")?.statement;
-  if (oldD !== curD) rows.push(["关键决策", oldD ?? "—", curD ?? "—"]);
-  snap.premises.forEach((p) => { const now = s.premises[p.id]?.value; if (now && now !== p.value) rows.push([p.label, p.value, now]); });
-  if ((snap.nextStep || "") !== (c.nextStep || "")) rows.push(["下一步", snap.nextStep || "—", c.nextStep || "—"]);
+  if (!snap) return `<div class="tkd">${head}<div class="s13 muted">这是一条记录，没有可以回去的状态。</div></div>`;
+  const rows = snapDiff(c, snap);
   const body = rows.length ? `<table class="tkd-t"><tr><th></th><th>那时</th><th>现在</th></tr>${rows.map(([k, a, b]) => `<tr><td>${esc(k)}</td><td>${esc(a)}</td><td><b>${esc(b)}</b></td></tr>`).join("")}</table>`
-    : `<div class="s13 muted">那时的工作状态和现在一样。</div>`;
+    : `<div class="s13 muted">那时的工作状态和现在一样，不需要回去。</div>`;
   const note = S.rollbackNote && rows.length ? `<div class="amber s13" style="line-height:1.7">回到这时只恢复工作状态，不会撤回已经发生的事${c.actionIds.map((id) => s.actions[id]).filter((a) => a?.external && a.status === "done").map((a) => `；${esc(a.label)}已经发出`).join("")}。之后变化过的条件会重新检查。</div>` : "";
   return `<div class="tkd">${head}${body}${note}${rows.length ? `<div><button class="btn sm ${S.rollbackNote ? "dark" : ""}" data-act="rollback" data-id="${e.id}">${S.rollbackNote ? "确认回到这时" : "回到这时"}</button></div>` : ""}</div>`;
 }
