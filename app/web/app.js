@@ -203,15 +203,15 @@ function matsModal() {
 // ---------- 场景入口 ----------
 const SCENES = {
   today: {
-    title: "今天最重要的事", short: "根据邮件、会议和项目资料，帮你找到今天的重点", grad: "lilac",
+    title: "今天最重要的事", short: "根据邮件、会议和项目资料，帮你梳理今日重点", grad: "lilac",
     sub: "结合邮件、会议纪要、日历和项目资料，告诉你今天先做什么",
     can: ["找出邮件里真正需要回复或决策的事情", "从会议纪要中识别承诺和待办", "结合日历判断时间紧迫度", "发现长时间没有推进的事项", "给出今天最值得做的 3 件事", "直接准备邮件、会议材料或任务清单"],
     example: "今天最重要的是确认产品发布页文案。你在周一的会议里答应今天给出反馈，但设计稿还没有收到你的意见。建议先花 20 分钟完成批注。我可以帮你整理需要确认的 4 个问题。",
     cta: "查看我的今日重点",
     frame: "【今天最重要的事】请从下面的邮件、会议纪要和项目资料里，找出今天最值得先做的 3 件事（真正要我回复或决定的、我答应过别人的、快到期的、很久没推进的），每件说清楚为什么是今天、先做哪一步、大概要多久，并准备好可以直接用的草稿。",
     inputs: [
-      { key: "email", ref: "email", label: "邮件", ph: "暂不支持直接连接邮箱，先把要处理的邮件粘贴到这里（带上发件人和主题更准）" },
-      { key: "minutes", ref: "minutes", label: "会议纪要", ph: "暂不支持直接连接会议软件，先把会议纪要或文字稿粘贴到这里" },
+      { key: "email", ref: "email", label: "邮件", ph: "连接邮箱即将支持，现在可以先把要处理的邮件粘贴进来试试~（带上发件人和主题更准）" },
+      { key: "minutes", ref: "minutes", label: "会议纪要", ph: "连接会议软件即将支持，现在可以先把会议纪要或文字稿粘贴进来试试~" },
     ],
     sample: {
       email: "发件人：林夏（设计）\n主题：发布页设计稿 v3，麻烦周五前给意见\n正文：发布页 v3 改了首屏标题和价格区，需要你确认文案方向，周五（10/10）前给到我就能赶上下周一开发。\n\n发件人：王磊（销售）\n主题：客户 A 想提前看演示\n正文：客户 A 希望下周三前看到新版本演示，能否安排 30 分钟？\n\n发件人：HR\n主题：Q4 晋升材料提交提醒\n正文：本月 20 日前提交团队成员的晋升材料。",
@@ -227,7 +227,7 @@ const SCENES = {
     frame: "【持续关注项目进展】请根据下面的发布计划和 GitHub PR / Issue 情况，判断这次发布是否能按计划进行：哪些 PR 影响发布、谁在阻塞、哪些很久没更新、风险有多大、今天应该先推动什么，并准备好可以发给团队的同步消息草稿。",
     inputs: [
       { key: "plan", ref: "release", label: "发布计划", ph: "发布日期、范围、负责人，比如：v2.3 周五 10/17 发布，包含支付改版和新首页" },
-      { key: "github", ref: "github", label: "GitHub PR / Issue", ph: "暂不支持直接连接 GitHub，先把 PR 和 Issue 的列表、状态、评论粘贴到这里" },
+      { key: "github", ref: "github", label: "GitHub PR / Issue", ph: "连接 GitHub 即将支持，现在可以先把 PR 和 Issue 的列表、状态、评论粘贴进来试试~" },
     ],
     sample: {
       plan: "v2.3 计划 10/17（周五）发布，范围：支付流程改版、新首页、订单导出。发布负责人：你；测试：赵琳。",
@@ -243,8 +243,8 @@ const SCENES = {
     frame: "【减脂计划】请根据我的目标、健康数据摘要和今天的日程，安排今天可执行的运动和饮食，以及这一周的节奏。只谈时间、精力和习惯安排，不做任何医疗诊断或用药、热量处方；数据看起来异常时，建议我咨询专业人士。",
     inputs: [
       { key: "goal", ref: "goal", label: "你的目标", ph: "比如：3 个月减 5 公斤，每周至少运动 3 次" },
-      { key: "health", ref: "health", label: "健康数据", ph: "暂不支持直接连接 Apple Health，先把最近几天的睡眠、步数、运动摘要粘贴到这里" },
-      { key: "day", ref: "schedule", label: "今天的安排", ph: "暂不支持自动读取日历，先写一下今天的会议和空闲时间" },
+      { key: "health", ref: "health", label: "健康数据", ph: "连接 Apple Health 即将支持，现在可以先把最近几天的睡眠、步数、运动摘要粘贴进来试试~" },
+      { key: "day", ref: "schedule", label: "今天的安排", ph: "自动读取日历即将支持，现在可以先写一下今天的会议和空闲时间试试~" },
     ],
     sample: {
       goal: "3 个月减 5 公斤，每周至少运动 3 次，原计划今晚 19:00 力量训练 45 分钟。",
@@ -259,7 +259,7 @@ const SCENES = {
     example: "周一的周会里有 4 个待办，其中「支付流程提测」和「客户 A 演示时间」还没有负责人确认。我起草了一封跟进邮件，要发给与会者吗？",
     cta: "整理这次会议",
     frame: "【会议之后的跟进】请从下面的会议纪要里找出所有承诺和待办（谁、做什么、什么时候），标出没有负责人或没有截止时间的，起草一封跟进邮件，并准备下次会议的议程。",
-    inputs: [{ key: "minutes", ref: "minutes", label: "会议纪要", ph: "暂不支持直接连接会议软件，先把会议纪要或文字稿（飞书妙记、腾讯会议等）粘贴到这里" }],
+    inputs: [{ key: "minutes", ref: "minutes", label: "会议纪要", ph: "连接会议软件即将支持，现在可以先把会议纪要或文字稿（飞书妙记、腾讯会议等）粘贴进来试试~" }],
     sample: { minutes: "10/6 周一 产品周会（参会：你、张明、林夏、王磊、赵琳）\n- 发布页文案：你周五前给设计反馈\n- 支付流程改版：张明负责，预计 10/14 提测\n- 客户 A 演示：时间待定，谁来准备没说\n- 回归测试用例：赵琳更新，没定时间\n- 下次周会 10/13" },
   },
 };
@@ -306,7 +306,7 @@ function sceneModal() {
       ${S.scene === "release" ? `<div class="sfold">${cIcon("folder")}<div style="flex:1"><b>接管项目文件夹（推荐）</b><div class="s13" style="color:var(--ink2);margin-top:2px">选一个项目目录，我先读一遍理出进展；之后里面的文件有变动，我会自动判断牵动了什么并提醒你（网页开着时检查）</div></div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">${"showDirectoryPicker" in window ? `<button class="btn mint" data-act="scene-folder">选择文件夹</button>` : `<span class="s12 faint">需要 Chrome 或 Edge</span>`}<button class="btn" data-act="scene-vfolder">用示例项目文件夹试试</button></div></div>
         <div class="sor">或者先粘贴</div>` : ""}
-      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.ph.startsWith("暂不支持") ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
+      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.ph.includes("即将支持") ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
     </div>
     <div class="scene-f"><button class="btn" data-act="scene-sample">用示例数据试试</button><span style="flex:1"></span><button class="btn mint lg" data-act="scene-go">${c.cta}</button></div>
   </div></div>`;
