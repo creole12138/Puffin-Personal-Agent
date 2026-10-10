@@ -459,7 +459,7 @@ function home() {
         <button class="btn mint lg" data-act="tell">Tell me</button>
       </div>
     </div>
-    <div class="hints"><div class="row" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9922E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="提示"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg><a href="#" data-act="demo">快速认识 Puffin</a></div>${isExample() ? "" : `<div>应用示例：<a href="#" data-act="example">看看 Puffin 是怎么协助做 Q4 规划的</a></div>`}</div>
+    <div class="hints">${isExample() ? "" : `<div>应用示例：<a href="#" data-act="example">看看 Puffin 是怎么协助做 Q4 规划的</a></div>`}<div class="row" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9922E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="提示"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg><a href="#" data-act="demo">快速认识 Puffin</a></div></div>
   </div>`;
 }
 
