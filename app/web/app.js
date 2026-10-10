@@ -1,3 +1,5 @@
+/** 新前提生效前的占位取值（与 core/engine/ids.ts 的 NEW_PREMISE 一致） */
+const NEW_P = "（原本没有）";
 // 云朵小管家 —— 网页端。结构与视觉照 Claude Design 原型「工作卡 Agent 原型」。原生 JS，无构建步骤。
 const $app = document.getElementById("app");
 const AV = (w, h) => `<img src="/agent.svg" alt="" width="${w}" height="${h}" style="width:${w}px;height:${h}px;flex-shrink:0">`;
@@ -60,7 +62,7 @@ function decideAlerts() {
     out.set(key, { cards: all, text: `${src ? `《${src}》里` : ""}${s.premises[pc.premiseId]?.label ?? "一个条件"}变成了 ${pc.to}`, sub: all.length > 1 ? `牵动了 ${all.length} 件事的决定` : `「${title(all[0])}」的决定需要再看看` });
   }
   for (const p of Object.values(s.proposals ?? {})) if (p.status === "pending" && p.workCardId && ![...out.values()].some((v) => v.cards.includes(p.workCardId)))
-    out.set(`pr:${p.id}`, { cards: [p.workCardId], text: `${p.change.label}可能从 ${p.change.from} 变成 ${p.change.to}`, sub: `「${title(p.workCardId)}」等你确认` });
+    out.set(`pr:${p.id}`, { cards: [p.workCardId], text: p.change.from === NEW_P ? `出现新情况：${p.change.label} = ${p.change.to}` : `${p.change.label}可能从 ${p.change.from} 变成 ${p.change.to}`, sub: `「${title(p.workCardId)}」等你确认` });
   return out;
 }
 function checkAlerts() {
@@ -683,7 +685,7 @@ function rippleView(c, pc) {
   const failed = (i) => i.handling === "auto_updated" && (i.kind === "action" ? s.actions[i.id]?.status === "paused" : i.kind === "reminder" ? !!remOf(i)?.stale : false);
   const box = (cls, k, i, extra = "") => `<div class="ritem"><div class="k ${cls}">${k}</div><div class="v">${esc(name(i))}</div>${extra}</div>`;
   return `<div class="panel pad24">
-    <div class="rp-head"><div class="t">前提变化：${esc(p?.label)}从 ${esc(pc.from)} 变成 ${esc(pc.to)}</div>
+    <div class="rp-head"><div class="t">${pc.from === NEW_P ? `新情况：${esc(p?.label)} = ${esc(pc.to)}` : `前提变化：${esc(p?.label)}从 ${esc(pc.from)} 变成 ${esc(pc.to)}`}</div>
       <div class="d">来源：${esc(evTitle(pc.evidenceId))} · 影响 ${nDec} 条结论、${nAct} 个动作 · 已自动处理 ${nAuto} 项，需要你决定 ${nNeed} 项</div></div>
     ${on.filter((i) => i.handling === "needs_user").map((i) => { const d = s.decisions[i.id], a = pc.assessments.find((x) => x.decisionId === i.id);
       if (!d || !["invalidated", "weakened"].includes(d.status)) return "";
@@ -981,7 +983,7 @@ function proposalBlock(id) {
     ? `确认改为 ${p.change.to}${p.drafts.length && !allCancelled ? "，更正消息待我发送" : ""}`
     : "更正消息没问题，待我发送";
   return `<div class="prop ${gone ? "gone" : ""}">
-    <div class="diff"><span class="d-lbl">${esc(p.change.label)}</span><span class="d-from">${esc(p.change.from)}</span><span class="d-arr" aria-hidden="true">→</span><span class="d-to">${esc(p.change.to)}</span>${p.status === "applied" && p.source !== "user" && !p.drafts.length ? `<span class="d-tag">已更新</span>` : ""}</div>
+    <div class="diff"><span class="d-lbl">${esc(p.change.label)}</span><span class="d-from">${p.change.from === NEW_P ? "新增" : esc(p.change.from)}</span><span class="d-arr" aria-hidden="true">→</span><span class="d-to">${esc(p.change.to)}</span>${p.status === "applied" && p.source !== "user" && !p.drafts.length ? `<span class="d-tag">已更新</span>` : ""}</div>
     ${p.drafts.map((d) => { const a = d.actionId ? s.actions[d.actionId] : null; return `<div class="draft" data-quotable="1"><div class="s11 muted">拟发给 ${esc(d.to)}</div><div>${esc(d.body)}</div>
       ${a?.status === "cancelled" ? `<div class="s11 muted">你决定不发了</div>` : `<div class="row" style="gap:12px">${done && a ? `<button class="link" data-act="copy" data-text="${esc(d.body)}">${S.copied === d.body ? "已复制" : "复制，去发送"}</button>` : ""}${a ? `<button class="link" style="color:var(--ink3)" data-act="cancel-act" data-id="${a.id}">不用发了</button>` : ""}</div>`}</div>`; }).join("")}
     ${gone ? `<div class="s11 muted">已按你的纠正处理</div>`
@@ -1143,7 +1145,7 @@ const actions = {
     const st0 = st(), props = (r.result.proposals ?? []), changes = r.result.changes ?? [];
     const ask = props.find((p) => p.status === "pending"), applied = props.filter((p) => p.status === "applied");
     let outcome, go = null;
-    if (ask) { outcome = `${ask.change.label}可能从「${ask.change.from}」变成「${ask.change.to}」，牵动了「${st0.workCards[ask.workCardId]?.title ?? "工作卡"}」，等你确认`; go = ask.workCardId; }
+    if (ask) { outcome = `${ask.change.from === NEW_P ? `出现新情况「${ask.change.label} = ${ask.change.to}」` : `${ask.change.label}可能从「${ask.change.from}」变成「${ask.change.to}」`}，牵动了「${st0.workCards[ask.workCardId]?.title ?? "工作卡"}」，等你确认`; go = ask.workCardId; }
     else if (changes.length) { const pc = changes[0], n = pc.impacts.filter((i) => i.handling !== "unaffected").length; outcome = `${st0.premises[pc.premiseId]?.label}从「${pc.from}」变成「${pc.to}」，${n} 项受影响${applied.length ? "，已自动更新" : ""}`; go = pc.impacts.find((i) => i.handling === "needs_user")?.workCardId ?? pc.impacts[0]?.workCardId ?? null; }
     else outcome = "看过了，这次改动没有改变卡上的判断";
     S.vfResult = { ref: old.ref, diff, outcome, go, warn: !!ask };

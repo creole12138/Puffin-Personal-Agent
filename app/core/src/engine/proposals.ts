@@ -8,7 +8,7 @@
  */
 import type { AgentState, DecisionAssessment, ID, ImpactItem, Proposal, ProposalSource } from "../types.ts";
 import { emit } from "./events.ts";
-import { newId, now } from "./ids.ts";
+import { newId, now, changeText, NEW_PREMISE } from "./ids.ts";
 import { applyPremiseChange, computeImpacts, directlyAffectedDecisions, type Assessor, type Recomputer } from "./ripple.ts";
 
 /** 起草补救消息（通常由 LLM 实现）；不可用时用模板 */
@@ -79,7 +79,7 @@ export async function propose(state: AgentState, input: ProposeInput): Promise<P
   (state.proposals ??= {})[prop.id] = prop;
   if (prop.mode === "auto") await apply(state, prop, input.recompute);
   else emit(state, { type: "plan_proposed", actor: "agent", workCardId: cardId,
-    summary: `我判断${p.label}可能从 ${p.value} 变成 ${input.to}，因为${prop.gateReason}，先问你`, payload: { proposalId: prop.id } });
+    summary: `我判断${changeText(p.label, p.value, input.to, "可能变成")}，因为${prop.gateReason}，先问你`, payload: { proposalId: prop.id } });
   return prop;
 }
 
@@ -104,7 +104,7 @@ async function apply(state: AgentState, prop: Proposal, recompute?: Recomputer) 
   }
   if (prop.source !== "user" && prop.mode === "auto") {
     emit(state, { type: "premise_changed", actor: "agent", workCardId: prop.workCardId, visibleInTimeline: true,
-      summary: `我推断${prop.change.label}也变成了 ${prop.change.to}（${prop.reason}），已先按这个更新，可以随时纠正`, payload: { proposalId: prop.id, claim: { kind: "premise_value", premiseId: prop.change.premiseId, value: prop.change.to } } });
+      summary: `我推断${prop.change.from === NEW_PREMISE ? `出现了新情况：${prop.change.label} = ${prop.change.to}` : `${prop.change.label}也变成了 ${prop.change.to}`}（${prop.reason}），已先按这个更新，可以随时纠正`, payload: { proposalId: prop.id, claim: { kind: "premise_value", premiseId: prop.change.premiseId, value: prop.change.to } } });
   }
 }
 
@@ -119,7 +119,7 @@ export async function confirmProposal(state: AgentState, id: ID, opts: { recompu
   for (const d of prop.drafts) if (d.actionId && state.actions[d.actionId]) state.actions[d.actionId]!.approvedAt = now();
   prop.status = "confirmed"; prop.decidedAt = now();
   emit(state, { type: "plan_confirmed", actor: "user", workCardId: prop.workCardId,
-    summary: `你确认了：${prop.change.label}改为 ${prop.change.to}${prop.drafts.length ? `，更正消息待你发送` : ""}`, payload: { proposalId: id } });
+    summary: `你确认了：${prop.change.from === NEW_PREMISE ? `新增「${prop.change.label}」= ${prop.change.to}` : `${prop.change.label}改为 ${prop.change.to}`}${prop.drafts.length ? `，更正消息待你发送` : ""}`, payload: { proposalId: id } });
   return prop;
 }
 

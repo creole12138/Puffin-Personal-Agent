@@ -7,6 +7,7 @@ import { emit } from "../engine/events.ts";
 import { newId, now } from "../engine/ids.ts";
 import { type Assessor, type Recomputer } from "../engine/ripple.ts";
 import { markCorrected, propose, type Drafter } from "../engine/proposals.ts";
+import { introducePremise } from "../engine/newFact.ts";
 import type { AgentState, ID, Proposal } from "../types.ts";
 import type { WorkTool } from "./workAgent.ts";
 
@@ -112,10 +113,11 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
       },
     },
     {
-      name: "add_premise", label: "记下新前提", description: "用户提到一个新的、会影响这件事的事实（如面试时间、新的约束），而卡上还没有对应的前提时调用。只在值已经明确时使用。如果卡上已有说同一件事的前提（名字可能不同），不要用这个，改用 update_premise。",
+      name: "add_premise", label: "记下新前提", description: "用户提到一个新的、会影响这件事的事实（如面试时间、出差、新的约束），而卡上还没有对应的前提时调用。只在值已经明确时使用。如果卡上已有说同一件事的前提（名字可能不同），不要用这个，改用 update_premise。记下后系统会立刻重新检查 affectsDecisionIds 里的决策，受影响的会标出来、相关动作会暂停。",
       parameters: Type.Object({
-        label: Type.String({ description: "如「面试时间」" }), value: Type.String({ description: "简短具体的值，≤12 字" }),
-        userQuote: Type.String(), affectsDecisionIds: Type.Array(Type.String(), { description: "依赖它的决策 id，可为空" }),
+        label: Type.String({ description: "如「面试时间」「本周出差」" }), value: Type.String({ description: "简短具体的值，≤12 字" }),
+        userQuote: Type.String({ description: "从用户这一轮消息里原样摘出的句子" }),
+        affectsDecisionIds: Type.Array(Type.String(), { description: "这个新事实可能让哪些决策不再成立或需要调整（决策 id 见工作状态）。宁可多填一条让系统检查，也不要漏掉；确实无关才留空" }),
       }),
       describe: (a, o) => (o === "done" ? `记下了新前提：${a?.label} = ${a?.value}` : ""),
       execute: async (_id, p: any) => {
@@ -123,13 +125,15 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
         if (!quoteInUserText(p.userQuote, ctx.userText)) throw new Error("userQuote 在用户这一轮的消息里找不到，不能当作用户明说的事实记下。不要再调用 add_premise；在回复里用一句话问用户是否属实。");
         const evId = newId("evd");
         state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "你在对话里说的", excerpt: p.userQuote, observedAt: now() };
-        const id = newId("pr");
-        state.premises[id] = { id, label: p.label, value: p.value, confirmed: true, evidenceIds: [evId], history: [], projectId: card().projectId };
-        card().premiseIds.push(id);
-        if (card().projectId) state.projects[card().projectId!]?.premiseIds.push(id);
-        for (const d of p.affectsDecisionIds ?? []) if (state.decisions[d]?.workCardId === cardId) state.decisions[d]!.premiseIds.push(id);
+        // 和更新已有前提走同一条路：登记 → 重新判断受影响的决策 → 暂停 / 补救 / 留痕
+        const r = await introducePremise(state, { cardId, label: p.label, value: p.value, evidenceId: evId, affectsDecisionIds: p.affectsDecisionIds ?? [],
+          source: "user", confidence: "high", reason: "你说的", assess: ctx.assess, drafter: ctx.drafter, recompute: ctx.recompute });
+        if (r.proposal) ctx.onProposal?.(r.proposal);
         card().updatedAt = now();
-        return { content: [{ type: "text", text: `已记下 ${id}` }], details: {} };
+        const pc = r.proposal?.premiseChangeId ? state.premiseChanges[r.proposal.premiseChangeId] : undefined;
+        const hit = (pc?.impacts ?? []).filter((x) => x.handling !== "unaffected");
+        const broken = hit.filter((x) => x.kind === "decision" && x.handling === "needs_user").map((x) => state.decisions[x.id]?.statement).filter(Boolean);
+        return { content: [{ type: "text", text: `已记下。${hit.length ? `影响 ${hit.length} 项${broken.length ? `，这些决策需要用户重新决定：${broken.join("；")}` : ""}。回复里点明受影响的决策，问用户想怎么调整。` : "没有决策受影响。"}` }], details: {} };
       },
     },
     {

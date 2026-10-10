@@ -11,7 +11,7 @@ import {
 } from "../core/src/index.ts";
 import type { Brains } from "./brains.ts";
 import { chat, describeProposal, makeCandidate, makeDrafter, makeRecomputer, makePlan, pushChat, runPlan } from "./agentOps.ts";
-import { confirmProposal, markCorrected, propose, rollbackTo, verifyClaims, type Proposal } from "../core/src/index.ts";
+import { confirmProposal, introducePremise, markCorrected, propose, rollbackTo, verifyClaims, type Proposal } from "../core/src/index.ts";
 
 import { CapError, usage, type Usage } from "./usage.ts";
 
@@ -106,7 +106,7 @@ export class Workspace {
       const changes: PremiseChange[] = [];
       const proposals: Proposal[] = [];
       if (Object.keys(s.premises).length) {
-        this.useLLM(7);
+        this.useLLM(12);
         const matches = await this.brains.match(s, ev);
         for (const m of matches) {
           // 新材料里读出的变化也走统一入口：把握高且影响小直接生效，否则先问
@@ -117,7 +117,19 @@ export class Workspace {
           if (prop.premiseChangeId) changes.push(s.premiseChanges[prop.premiseChangeId]!);
           if (prop.workCardId) pushChat(s, prop.workCardId, "agent", describeProposal(s, prop), { proposalIds: [prop.id] });
         }
-        if (!matches.length) emit(s, { type: "evidence_observed", actor: "agent", visibleInTimeline: false, summary: "新材料没有改变任何前提", payload: { evidenceId: ev.id } });
+        // 材料里冒出的新事实：登记成新前提，走同一条 预演 → 分档 → 影响传播 的路
+        for (const f of matches.newFacts ?? []) {
+          const cardId = s.decisions[f.affectsDecisionIds[0]!]?.workCardId;
+          if (!cardId) continue;
+          const { proposal: prop } = await introducePremise(s, { cardId, label: f.label, value: f.value, evidenceId: ev.id,
+            affectsDecisionIds: f.affectsDecisionIds.filter((d) => s.decisions[d]?.workCardId === cardId), source: "material",
+            confidence: f.confidence, reason: `《${ev.title}》里写着“${f.quote}”`, assess: this.brains.assess, drafter: makeDrafter(this.brains), recompute: makeRecomputer(this.brains) });
+          if (!prop) continue;
+          proposals.push(prop);
+          if (prop.premiseChangeId) changes.push(s.premiseChanges[prop.premiseChangeId]!);
+          if (prop.workCardId) pushChat(s, prop.workCardId, "agent", describeProposal(s, prop), { proposalIds: [prop.id] });
+        }
+        if (!matches.length && !matches.newFacts?.length) emit(s, { type: "evidence_observed", actor: "agent", visibleInTimeline: false, summary: "新材料没有改变任何前提", payload: { evidenceId: ev.id } });
       }
       await this.refreshPlans(s, proposals);
       return { evidence: ev, changes, proposals };

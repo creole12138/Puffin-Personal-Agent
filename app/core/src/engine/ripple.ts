@@ -16,7 +16,7 @@ import type {
   Action, AgentState, Decision, DecisionAssessment, ID, ImpactItem, PremiseChange,
 } from "../types.ts";
 import { emit } from "./events.ts";
-import { newId, now } from "./ids.ts";
+import { newId, now, changeText } from "./ids.ts";
 
 export interface AssessInput {
   state: AgentState;
@@ -148,7 +148,7 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
 
   emit(state, {
     type: "premise_changed", actor, projectId: premise.projectId,
-    summary: `${premise.label}从 ${from} 变成了 ${input.to}`,
+    summary: changeText(premise.label, from, input.to),
     payload: { premiseChangeId: change.id, premiseId: premise.id, from, to: input.to, evidenceId: input.evidenceId },
   });
 
@@ -213,7 +213,7 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
       emit(state, { type: "action_status_changed", actor: "agent", workCardId: i.workCardId,
         summary: `提醒已按新的${premise.label}（${input.to}）调整：${r.reason}`, payload: { reminderId: r.id, premiseChangeId: change.id, claim: { kind: "reminder_changed", reminderId: r.id, before } } });
     } else {
-      r.stale = `${premise.label}从 ${from} 变成了 ${input.to}`;
+      r.stale = changeText(premise.label, from, input.to);
       emit(state, { type: "action_status_changed", actor: "agent", workCardId: i.workCardId,
         summary: `提醒「${r.reason}」依赖的${premise.label}变了，时间可能要跟着调整，我还没改`, payload: { reminderId: r.id, premiseChangeId: change.id } });
     }
