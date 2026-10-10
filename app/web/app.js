@@ -198,6 +198,14 @@ function nav() {
   </div>`;
 }
 
+/** 已连接来源（本机文件夹、日历）里的最新材料，新开的事都能读到 */
+function connectedEvidenceIds() {
+  const s = st(), ids = [];
+  if (S.folder) for (const f of Object.values(S.folder.files ?? {})) { const e = f.evidenceId && s.evidence[f.evidenceId]; if (e) ids.push((latestOf(e.ref) ?? e).id); }
+  if (Object.values(s.grants).some((g) => g.source === "calendar" && !g.revokedAt)) { const c = Object.values(s.evidence).filter((e) => e.ref === "calendar").sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1); if (c) ids.push(c.id); }
+  return [...new Set(ids)];
+}
+
 // ---------- 连日历（多处复用） ----------
 const CAL_HELP = {
   icloud: ["iPhone / Mac 日历", ["在 Mac「日历」App 里新建一个 iCloud 日历（「我的 Mac 上」的本地日历不行）", "右键这个日历 →「共享日历…」→ 勾选「公开日历」", "复制出现的 webcal:// 链接，粘贴到这里即可"], "更新快，改完几分钟内就能发现"],
@@ -446,7 +454,7 @@ function home() {
       <textarea rows="3" aria-label="说一件事" placeholder="说一件放不下的事，比如：和 Alex 还有一些工作一直没对齐&#10;也可以把相关文件拖进来" data-bind="ask" data-keep="ask">${esc(S.ask)}</textarea>
       ${S.calWhere === "composer" ? calConnect("composer") : ""}
       <div class="composer-f">
-        <div class="chips">${Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt) ? `<span class="chip cal-on">${cIcon("cal")}日历已连接</span>` : `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>`}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
+        <div class="chips">${S.folder ? `<span class="chip cal-on">${cIcon("folder")}文件夹「${esc(S.folder.name)}」已连接</span>` : "showDirectoryPicker" in window ? `<button class="chip-btn" data-act="folder">${cIcon("folder")}连接文件夹</button>` : ""}${Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt) ? `<span class="chip cal-on">${cIcon("cal")}日历已连接</span>` : `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>`}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
         <button class="btn mint lg" data-act="tell">Tell me</button>
       </div>
     </div>
@@ -1006,7 +1014,7 @@ const actions = {
   },
   "cand-draft": (el) => withBusy("我在看你说的话和材料，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
     const { ids } = await upload(S.candAttach);
-    const r = await api(`/cards/${el.dataset.id}/draft`, { evidenceIds: ids });
+    const r = await api(`/cards/${el.dataset.id}/draft`, { evidenceIds: [...ids, ...connectedEvidenceIds()] });
     S.candAttach = []; openCard(r.result.id);
   }),
   remind: (el) => withBusy("好，明天提醒你", () => api(`/cards/${el.dataset.id}/remind`, {})),
@@ -1081,8 +1089,7 @@ const actions = {
       const r = await api("/candidates", { text: c.title, brief: c.frame });
       const cid = r.result.id, ids = [];
       for (const i of filled) { const m = await api("/materials", { title: `${i.label}（${c.title}）`, text: v[i.key], ref: i.ref }); ids.push(m.result.evidence.id); }
-      const calEv = Object.values(st().evidence).filter((e) => e.ref === "calendar").sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1);
-      if (calEv && (sid === "today" || sid === "fitness")) ids.push(calEv.id);
+      ids.push(...connectedEvidenceIds().filter((id) => sid !== "fitness" || st().evidence[id]?.ref === "calendar"));
       const d = await api(`/cards/${cid}/draft`, { evidenceIds: ids });
       openCard(d.result.id); S.sceneIn = {};
     });
