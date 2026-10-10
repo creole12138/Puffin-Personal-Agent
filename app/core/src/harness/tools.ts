@@ -19,6 +19,17 @@ export interface ToolContext {
   drafter?: Drafter;
   /** 本轮产生的变更提议（对话把它们挂到回复消息上） */
   onProposal?: (p: Proposal) => void;
+  /** 本轮用户消息原文。模型声称的「用户原话」必须能在这里找到，否则不算用户明说 */
+  userText?: string;
+}
+
+const norm = (t: string) => t.replace(/[\s"'“”‘’「」『』《》（）()【】\[\].,，。!！?？:：…~～、-]/g, "").toLowerCase();
+/** 模型给的 userQuote 是否真出自本轮用户消息：按分句逐段查，每段（≥2 字）都要能在原文里找到 */
+export function quoteInUserText(quote: string, userText?: string): boolean {
+  if (!userText?.trim() || !quote?.trim()) return false;
+  const hay = norm(userText);
+  const parts = quote.split(/[；;\n]|(?:\.\.\.)|…/).map(norm).filter((x) => x.length >= 2);
+  return parts.length > 0 && parts.every((x) => hay.includes(x));
 }
 
 export function readableEvidence(state: AgentState, cardId: ID): ID[] {
@@ -108,6 +119,7 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
       describe: (a, o) => (o === "done" ? `记下了新前提：${a?.label} = ${a?.value}` : ""),
       execute: async (_id, p: any) => {
         const bad = badValue(p.value); if (bad) throw new Error(bad);
+        if (!quoteInUserText(p.userQuote, ctx.userText)) throw new Error("userQuote 在用户这一轮的消息里找不到，不能当作用户明说的事实记下。不要再调用 add_premise；在回复里用一句话问用户是否属实。");
         const evId = newId("evd");
         state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "你在对话里说的", excerpt: p.userQuote, observedAt: now() };
         const id = newId("pr");
@@ -131,13 +143,22 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
     },
     {
       name: "update_premise", label: "更新前提", description: "用户明确说出某个前提的新值时调用（如“面试推迟到周六了”里的面试时间）。会立即生效并自动找出受影响的决策和动作。你自己推断出来的连带变化不要用这个，用 propose_change。",
-      parameters: Type.Object({ premiseId: Type.String(), newValue: Type.String({ description: "简短具体的新值，≤12 字，如「周六」「10 月 11 日 18:00」" }), userQuote: Type.String({ description: "用户原话（可合并上下文，如“面试推迟到周六；作业也推迟了”）" }) }),
+      parameters: Type.Object({ premiseId: Type.String(), newValue: Type.String({ description: "简短具体的新值，≤12 字，如「周六」「10 月 11 日 18:00」" }), userQuote: Type.String({ description: "从用户这一轮消息里原样摘出的句子，多句用；分隔。系统会逐句核对，对不上就不会生效" }) }),
       describe: () => "",
       execute: async (_id, p: any) => {
         const pr = state.premises[p.premiseId];
         if (!pr) throw new Error(`前提不存在。可用：${card().premiseIds.map((id) => `${id}=${state.premises[id]?.label}`).join("；")}。如果是新出现的前提，用 add_premise。`);
         const bad = badValue(p.newValue);
         if (bad) throw new Error(bad);
+        if (!quoteInUserText(p.userQuote, ctx.userText)) {
+          // 原话对不上：不能当用户明说处理，降级成推断，走「先问用户」
+          const evId = newId("evd");
+          state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "推断", excerpt: "你没有明说，是我从对话里推断的", observedAt: now() };
+          const prop = await propose(state, { premiseId: pr.id, to: p.newValue, source: "inference", evidenceId: evId, reason: "你没有明说，是我推断的", confidence: "medium", assess: ctx.assess, drafter: ctx.drafter });
+          if (prop) ctx.onProposal?.(prop);
+          emit(state, { type: "evidence_observed", actor: "agent", workCardId: cardId, visibleInTimeline: false, summary: `「${pr.label}」的改动没有用户原话支撑，改为先问用户`, payload: { claimedQuote: String(p.userQuote ?? "").slice(0, 200) } });
+          return { content: [{ type: "text", text: `你给的 userQuote 在用户这一轮的消息里找不到，所以没有生效，已改成推断等用户确认${prop?.mode === "ask" ? "（界面会给确认按钮）" : ""}。回复里不要说已经更新，也不要把它说成用户说过的话；如实说这是你的推断，问一句即可。` }], details: {} };
+        }
         const evId = newId("evd");
         state.evidence[evId] = { id: evId, source: "user_input", ref: "chat", title: "你在对话里说的", excerpt: p.userQuote, observedAt: now() };
         markCorrected(state, pr.id);

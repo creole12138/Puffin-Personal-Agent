@@ -70,7 +70,7 @@ test("所有 Agent 调用都以通用规范为基础，任务指令叠加在后"
 test("对话工具：前提值必须简短具体；新事实用 add_premise 记下", async () => {
   const { cardTools, ruleAssessor } = await import("../src/index.ts");
   const state = seedQ4();
-  const tools = cardTools({ state, cardId: "wc_alex", assess: ruleAssessor });
+  const tools = cardTools({ state, cardId: "wc_alex", assess: ruleAssessor, userText: "面试推迟到周六了" });
   const update = tools.find((t) => t.name === "update_premise")!;
   const add = tools.find((t) => t.name === "add_premise")!;
   await assert.rejects(update.execute("1", { premiseId: "pr_budget", newValue: "面试改到周六；作业截止是否随之改变尚未确认", userQuote: "x" }), /不是一个简短具体的值/);
@@ -80,4 +80,21 @@ test("对话工具：前提值必须简短具体；新事实用 add_premise 记�
   assert.equal(p.value, "周六");
   assert.ok(state.workCards.wc_alex!.premiseIds.includes(p.id));
   assert.ok(state.decisions.d_planA!.premiseIds.includes(p.id));
+});
+
+test("userQuote 必须出自本轮用户消息，编造的原话降级为推断、先问用户", async () => {
+  const { cardTools, ruleAssessor, quoteInUserText } = await import("../src/index.ts");
+  assert.ok(quoteInUserText("预算砍到 30 万；方案 A 不做了", "跟你说下，预算砍到30万了，方案A不做了"));
+  assert.ok(!quoteInUserText("预算砍到 5 万", "Alex 那边有什么进展"));
+  assert.ok(!quoteInUserText("预算砍到 5 万", undefined));
+  const state = seedQ4();
+  const before = state.premises.pr_budget!.value, decStatus = state.decisions.d_planA!.status;
+  const made: any[] = [];
+  const tools = cardTools({ state, cardId: "wc_alex", assess: ruleAssessor, userText: "Alex 那边有什么进展", onProposal: (p) => made.push(p) });
+  const r = await tools.find((t) => t.name === "update_premise")!.execute("1", { premiseId: "pr_budget", newValue: "5 万", userQuote: "用户原话：预算砍到 5 万" });
+  assert.match((r.content[0] as any).text, /找不到/);
+  assert.equal(state.premises.pr_budget!.value, before, "前提没有被直接改掉");
+  assert.equal(state.decisions.d_planA!.status, decStatus, "确认过的决定没有被判失效");
+  assert.equal(made.length, 1); assert.equal(made[0].source, "inference"); assert.equal(made[0].mode, "ask");
+  await assert.rejects(tools.find((t) => t.name === "add_premise")!.execute("2", { label: "新预算", value: "5 万", userQuote: "预算砍到 5 万", affectsDecisionIds: [] }), /找不到/);
 });

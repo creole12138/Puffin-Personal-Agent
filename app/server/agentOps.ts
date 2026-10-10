@@ -156,9 +156,10 @@ export async function chat(state: AgentState, brains: Brains, cardId: ID, text: 
   pushChat(state, cardId, "user", text, quote ? { quote } : {});
   const made: Proposal[] = [];
   const agent = createWorkAgent({ state, model: brains.model, getApiKey: brains.getApiKey, projectId: c.projectId,
-    tools: cardTools({ state, cardId, assess: brains.assess, drafter: makeDrafter(brains), onProposal: (p) => made.push(p) }), workState: cardSummary(state, cardId),
+    tools: cardTools({ state, cardId, assess: brains.assess, drafter: makeDrafter(brains), onProposal: (p) => made.push(p), userText: text }), workState: cardSummary(state, cardId),
     systemPrompt: [
       "你在和用户讨论这张工作卡。回答要短（≤3 句），用纯文本，不要用 Markdown 符号（如 ** 或 #）。",
+      "用户只是在提问（如「Alex 那边有什么进展」）时，只回答，不要调用 update_premise / add_premise；userQuote 只能原样摘自用户这一轮的话，不能自己编。",
       "用户告诉你一个变化时：",
       "1. 用户明确说了的，直接更新：已有前提用 update_premise，卡上没有的新事实用 add_premise。值只写简短具体的值，如「周六」。",
       "   先对照卡上已有的前提：说的是同一件事（哪怕名字不一样，比如「今晚训练意愿」和「今晚训练强度」），就用 update_premise 把它更新成合并后的值（如「照原计划·加重」），不要再 add_premise 一条，避免卡上出现两条说法打架的条件。",
