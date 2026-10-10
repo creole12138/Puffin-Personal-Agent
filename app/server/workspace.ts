@@ -61,8 +61,14 @@ export class Workspace {
 
   loadExample() {
     return this.run((s) => {
-      const ex = seedQ4();
-      Object.assign(s, { ...ex, model: s.model });
+      // 合并进当前工作区：保留你已有的工作、连接（日历、文件夹）和对话，只把例子加进来
+      const ex = seedQ4() as unknown as Record<string, unknown>, cur = s as unknown as Record<string, unknown>;
+      for (const [k, v] of Object.entries(ex)) {
+        if (k === "model" || k === "version") continue;
+        if (k === "events" && Array.isArray(v)) { cur.events = [...((cur.events as unknown[]) ?? []), ...v].sort((a: any, b: any) => String(a.at).localeCompare(String(b.at))); continue; }
+        if (v && typeof v === "object" && !Array.isArray(v)) cur[k] = { ...((cur[k] as object) ?? {}), ...(v as object) };
+        else if (cur[k] === undefined) cur[k] = v;
+      }
     });
   }
 

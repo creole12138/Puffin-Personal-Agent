@@ -455,7 +455,7 @@ function home() {
       <textarea rows="3" aria-label="说一件事" placeholder="跟 Puffin 直接说说，比如：帮我一起脑暴一个设计方案&#10;也可以直接把相关文件拖进来，我帮你总结" data-bind="ask" data-keep="ask">${esc(S.ask)}</textarea>
       ${S.calWhere === "composer" ? calConnect("composer") : ""}
       <div class="composer-f">
-        <div class="chips">${S.folder ? `<span class="chip cal-on">${cIcon("folder")}文件夹「${esc(S.folder.name)}」已连接</span>` : "showDirectoryPicker" in window ? `<button class="chip-btn" data-act="folder">${cIcon("folder")}连接文件夹</button>` : ""}${Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId) ? `<span class="chip cal-on">${cIcon("cal")}日历已连接</span>` : `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>`}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
+        <div class="chips">${!S.folder && "showDirectoryPicker" in window ? `<button class="chip-btn" data-act="folder">${cIcon("folder")}连接文件夹</button>` : ""}${!Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId) ? `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>` : ""}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
         <button class="btn mint lg" data-act="tell">Tell me</button>
       </div>
     </div>
