@@ -36,7 +36,7 @@ async function api(path, body, method = "POST") {
 }
 async function withBusy(msg, fn) {
   S.busy = msg; render();
-  try { return await fn(); } catch (e) { toast(e.message, true); } finally { S.busy = null; render(); }
+  try { return await fn(); } catch (e) { toast(e.message, true); } finally { const k = decideAlerts(); S.alertKeys = new Set(k.keys()); S.bubbles = (S.bubbles ?? []).filter((b) => k.has(b.key)); S.busy = null; render(); }
 }
 let toastTimer;
 function toast(msg, err = false) {
@@ -46,7 +46,38 @@ function toast(msg, err = false) {
 }
 function connectStream() {
   const es = new EventSource(`/api/w/${S.wsId}/stream`);
-  es.onmessage = (m) => { S.ws = JSON.parse(m.data); render(); };
+  es.onmessage = (m) => { S.ws = JSON.parse(m.data); checkAlerts(); render(); };
+}
+
+// ---------- 主动提醒（冒泡） ----------
+function decideAlerts() {
+  const s = st(), out = new Map(); if (!s) return out;
+  const title = (id) => s.workCards[id]?.title ?? "工作卡";
+  for (const pc of openChanges()) {
+    const key = `ev:${pc.evidenceId || pc.id}`, cards = pc.impacts.filter((i) => i.handling === "needs_user").map((i) => i.workCardId);
+    const prev = out.get(key); const all = [...new Set([...(prev?.cards ?? []), ...cards])];
+    const src = s.evidence[pc.evidenceId]?.title;
+    out.set(key, { cards: all, text: `${src ? `《${src}》里` : ""}${s.premises[pc.premiseId]?.label ?? "一个条件"}变成了 ${pc.to}`, sub: all.length > 1 ? `牵动了 ${all.length} 件事的决定` : `「${title(all[0])}」的决定需要再看看` });
+  }
+  for (const p of Object.values(s.proposals ?? {})) if (p.status === "pending" && p.workCardId && ![...out.values()].some((v) => v.cards.includes(p.workCardId)))
+    out.set(`pr:${p.id}`, { cards: [p.workCardId], text: `${p.change.label}可能从 ${p.change.from} 变成 ${p.change.to}`, sub: `「${title(p.workCardId)}」等你确认` });
+  return out;
+}
+function checkAlerts() {
+  const now = decideAlerts(), keys = new Set(now.keys());
+  if (!S.alertKeys) { S.alertKeys = keys; return; }
+  const fresh = [...keys].filter((k) => !S.alertKeys.has(k));
+  S.alertKeys = keys;
+  S.bubbles = (S.bubbles ?? []).filter((b) => keys.has(b.key));
+  if (fresh.length && !S.busy) for (const k of fresh) S.bubbles.push({ key: k, ...now.get(k) });
+}
+function bubbleView() {
+  const bs = S.bubbles ?? []; if (!bs.length) return "";
+  const b = bs[bs.length - 1], more = bs.length - 1;
+  return `<div class="bubble" role="alert">${AV(44, 39)}<div class="bubble-b">
+    <div class="s12" style="color:var(--amber);font-weight:600">${more ? `刚发现 ${bs.length} 处变化` : "刚发现一处变化"}</div>
+    <div class="bubble-t">${esc(b.text)}</div><div class="s13 muted">${esc(b.sub)}</div>
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm mint" data-act="bubble-go" data-id="${b.cards[0]}" data-key="${esc(b.key)}">去看看</button><button class="btn sm" data-act="bubble-later">稍后</button></div></div></div>`;
 }
 
 // ---------- 派生数据 ----------
@@ -58,7 +89,7 @@ function openChanges() {
     pc.impacts.some((i) => i.kind === "decision" && i.handling === "needs_user" && ["invalidated", "weakened"].includes(s.decisions[i.id]?.status)));
 }
 const changesFor = (cardId) => openChanges().filter((pc) => pc.impacts.some((i) => i.workCardId === cardId && i.handling === "needs_user"));
-const needsYou = (c) => changesFor(c.id).length > 0;
+const needsYou = (c) => changesFor(c.id).length > 0 || Object.values(st()?.proposals ?? {}).some((p) => p.workCardId === c.id && p.status === "pending");
 const STAGE = { candidate: ["候选", "candtag"], draft: ["草稿", "draft"], active: ["进行中", "active"], done: ["已完成", "muted"], parked: ["搁置", "muted"] };
 const ACT = { planned: ["计划中", "muted"], paused: ["已暂停", "warn"], running: ["进行中", "active"], done: ["已完成", "active"], cancelled: ["已取消", "muted"] };
 const DEC = { valid: ["成立", "active"], weakened: ["待确认", "warn"], invalidated: ["不再成立", "bad"], superseded: ["已被替代", "muted"] };
@@ -83,6 +114,7 @@ function render() {
   const scrollMain = sameView ? $app.querySelector(".main")?.scrollTop : 0, scrollMsgs = $app.querySelector(".msgs");
   const atBottom = scrollMsgs ? scrollMsgs.scrollHeight - scrollMsgs.scrollTop - scrollMsgs.clientHeight < 40 : true;
   $app.innerHTML = S.wsId ? shell() : landing();
+  if (S.wsId && S.ws) $app.insertAdjacentHTML("beforeend", bubbleView());
   if (S.wsId && S.preview) $app.insertAdjacentHTML("beforeend", previewModal());
   const ht = S.hint && $app.querySelector(".task.hinted");
   if (ht) { const r = ht.getBoundingClientRect();
@@ -144,7 +176,7 @@ function shell() {
 
 function nav() {
   const s = st(), projects = Object.values(s.projects), loose = cardsOf(null);
-  const taskBtn = (c) => `<button class="task ${S.view === "card" && S.sel === c.id ? "on" : ""} ${S.hint?.cardId === c.id ? "hinted" : ""}" data-act="open" data-id="${c.id}">${esc(c.title)}${c.stage === "candidate" ? "" : `<span class="st"> · ${STAGE[c.stage][0]}</span>`}${needsYou(c) ? `<span class="flag"> · 待决定</span>` : ""}</button>`;
+  const taskBtn = (c) => `<button class="task ${S.view === "card" && S.sel === c.id ? "on" : ""} ${S.hint?.cardId === c.id ? "hinted" : ""}" data-act="open" data-id="${c.id}">${esc(c.title)}${c.stage === "candidate" ? "" : `<span class="st"> · ${STAGE[c.stage][0]}</span>`}${needsYou(c) ? `<span class="flag"> · 待决定</span><i class="pulse" aria-hidden="true"></i>` : ""}</button>`;
   const grants = Object.values(s.grants).filter((g) => !g.revokedAt && g.source !== "user_input");
   const cal = grants.find((g) => g.source === "calendar");
   const mats = Object.values(s.evidence).filter((e) => !["chat", "edit"].includes(e.ref)).length;
@@ -906,8 +938,8 @@ async function scanFolder() {
     const sib = prev ?? Object.entries(F.files).filter(([k]) => k !== entry.name && stem(k) === stem(entry.name)).map(([, v]) => v).pop();
     const r = await api("/materials", { title: entry.name, text: await readText(file), source: "local_folder", ref: `${F.name}/${entry.name}`, supersedes: sib?.evidenceId });
     F.files[entry.name] = { lm: file.lastModified, size: file.size, evidenceId: r.result.evidence.id };
-    reportChanges(r.result.changes, r.result.proposals);
   }
+  checkAlerts();
   store.set(folderKey(), JSON.stringify({ name: F.name, files: F.files })); render();
 }
 let folderTimer;
@@ -920,6 +952,8 @@ const actions = {
   home() { S.view = "home"; S.sel = null; S.proj = null; render(); },
   open(el) { if (S.hint?.cardId === el.dataset.id) S.hint = null; openCard(el.dataset.id); render(); },
   "tk-guide-ok"() { S.tkGuideOff = true; try { localStorage.setItem("puffin.tkGuide", "1"); } catch {} render(); },
+  "bubble-go"(el) { S.bubbles = []; openCard(el.dataset.id); S.showCard = false; render(); },
+  "bubble-later"() { S.bubbles = []; render(); },
   "hint-x"() { S.hint = null; render(); },
   project(el) { S.proj = el.dataset.id; S.view = "project"; render(); },
   demo() { S.view = "demo"; S.tour = 0; S.tourDecided = false; render(); },

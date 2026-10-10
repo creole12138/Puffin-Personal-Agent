@@ -555,3 +555,18 @@ button.who:hover .home-ic{color:var(--mint)}
 .tk-guide::before{content:"";position:absolute;left:22px;top:-5px;width:12px;height:12px;background:var(--ink);transform:rotate(45deg);border-radius:2px}
 .tk-guide .tk-legend{color:#fff}.tk-guide .lg.user{border-color:#C9D3D6}
 .tk-guide .btn{align-self:flex-end}
+
+/* 冒泡提醒 */
+.bubble{position:fixed;right:340px;bottom:24px;z-index:70;display:flex;gap:10px;align-items:flex-start;max-width:360px;animation:bubin .45s cubic-bezier(.2,1.4,.4,1)}
+.bubble>img{animation:bob 2.4s ease-in-out infinite;flex:none}
+.bubble-b{background:#fff;border:1px solid var(--amber-line);border-radius:14px 14px 14px 4px;padding:12px 14px;box-shadow:0 12px 32px rgba(27,43,51,.16)}
+.bubble-t{font-size:14px;font-weight:500;color:var(--ink);line-height:1.6;margin-top:2px}
+@keyframes bubin{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media (max-width:1100px){.bubble{right:16px}}
+/* 侧栏待决定脉冲点 */
+.task{position:relative}
+.task .pulse{position:absolute;right:8px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:#d29a3a}
+.task .pulse::after{content:"";position:absolute;inset:0;border-radius:50%;background:#d29a3a;animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{from{transform:scale(1);opacity:.7}to{transform:scale(2.6);opacity:0}}
+.task:has(.pulse){padding-right:22px}
