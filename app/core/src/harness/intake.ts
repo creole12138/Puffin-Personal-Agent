@@ -84,6 +84,11 @@ export function validateDraft(state: AgentState, d: WorkCardDraft, allowedEviden
   }
   for (const q of d.openQuestions) if (q.premiseKey && !pKeys.has(q.premiseKey)) errs.push(`问题「${q.question}」指向不存在的前提 ${q.premiseKey}`);
   if (d.openQuestions.length > 3) errs.push("待确认问题超过 3 个，请只保留最关键的");
+  for (const q of d.openQuestions) {
+    const all = `${q.question} ${q.options.join(" ")}`;
+    if (/哪一?年|年份|哪年|\d{4}\s*年|星期几|周几|是不是今年|今年还是/.test(all)) errs.push(`问题「${q.question}」在问年份或星期：这些按今天的日期推算即可，直接用推算出的值，删掉这个问题`);
+    if (/(「你」|你本人|是指你|指的是你|负责人是你吗)/.test(all)) errs.push(`问题「${q.question}」在确认「你」是谁：材料里的「你」就是用户本人，删掉这个问题`);
+  }
   if (hasCycle(d)) errs.push("决策之间的依赖形成了环");
   if (!d.decisions.length) errs.push("至少给出 1 条决策（用户已做出或正在倾向的做法），并写清它依赖哪些前提");
   for (const p of d.premises) {
