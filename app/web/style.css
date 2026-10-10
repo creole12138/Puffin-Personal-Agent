@@ -481,3 +481,20 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .x-btn:hover{background:rgba(27,43,51,.08);color:var(--ink)}
 .more-link{border:0;background:none;padding:4px 0;font:inherit;font-size:13.5px;font-weight:500;color:var(--mint);cursor:pointer}
 .more-link:hover{color:var(--mint-d);text-decoration:underline;text-underline-offset:3px}
+
+/* Markdown 预览 */
+.modal-b.md{font-family:var(--font);font-size:14.5px;line-height:1.8;white-space:normal;padding:22px 28px}
+.md h2,.md h3,.md h4,.md h5{margin:18px 0 8px;line-height:1.4;color:var(--ink)}
+.md h2{font-size:20px}.md h3{font-size:17px}.md h4,.md h5{font-size:15px}
+.md>:first-child{margin-top:0}
+.md p{margin:8px 0}
+.md ul,.md ol{margin:8px 0;padding-left:22px}.md li{margin:4px 0}.md li.sub{margin-left:18px;list-style:circle}
+.md b{color:var(--ink);font-weight:600}
+.md code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--line3);padding:1px 5px;border-radius:4px}
+.md pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto}.md pre code{background:none;padding:0}
+.md blockquote{margin:10px 0;padding:6px 14px;border-left:3px solid var(--mint);background:var(--soft);color:var(--ink2);border-radius:0 8px 8px 0}
+.md table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px}
+.md th,.md td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.md th{background:var(--soft);font-weight:600}
+.md hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+.note-b.md{white-space:normal}

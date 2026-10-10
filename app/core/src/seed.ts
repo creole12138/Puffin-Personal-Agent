@@ -51,11 +51,11 @@ export function seedQ4(): AgentState {
     a_sendAlex: { id: "a_sendAlex", workCardId: "wc_alex", label: "发给 Alex 的方案 A 对比材料", status: "planned",
       external: true, reversible: false, dependsOnDecisionIds: ["d_planA"], grantId: "g_folder" , output: { kind: "message", to: "Alex", title: "Q4 方案 A / B 对比", body: "Alex，方案 A 和 B 的对比整理好了：\n\n· 方案 A：覆盖面更全，预计 45 万左右\n· 方案 B：约 28 万，先覆盖核心留存场景\n\n按 Q4 总预算 50 万，A 能放下，余量 5 万。结合你说的先做留存，建议主推 A。财务数据小王周二给，到时我再核一遍数字。" } },
     a_costTable: { id: "a_costTable", workCardId: "wc_alex", label: "成本对比表（按预算计算）", status: "done",
-      external: false, reversible: true, dependsOnDecisionIds: [], premiseIds: ["pr_budget"] , output: { kind: "document", title: "成本对比表（按预算计算）", body: "项目            方案 A      方案 B\n预计成本        45 万       28 万\n占 Q4 预算      90%         56%\n预算余量        5 万        22 万\n覆盖范围        完整留存    核心留存\n\n计算依据：Q4 总预算 50 万（预算表 v2）" } },
+      external: false, reversible: true, dependsOnDecisionIds: [], premiseIds: ["pr_budget"] , output: { kind: "document", title: "成本对比表（按预算计算）", body: "# 方案 A / B 成本对比\n\n| 项目 | 方案 A | 方案 B |\n|---|---|---|\n| 预计成本 | 45 万 | 28 万 |\n| 占 Q4 预算 | 90% | 56% |\n| 预算余量 | 5 万 | 22 万 |\n| 覆盖范围 | 完整留存 | 核心留存 |\n\n> 计算依据：Q4 总预算 50 万（预算表 v2）" } },
     a_noteLi: { id: "a_noteLi", workCardId: "wc_alex", label: "发给小李的初版预算说明", status: "done",
       external: true, reversible: false, dependsOnDecisionIds: ["d_planA"] , output: { kind: "message", to: "小李", title: "Q4 初版预算说明", body: "小李，Q4 初版预算先按总额 50 万来排，重点放在留存项目上，目前倾向方案 A（约 45 万）。等财务数据确认后我再同步最终版。" } },
     a_budgetReq: { id: "a_budgetReq", workCardId: "wc_budget", label: "季度预算申请总额", status: "done",
-      external: false, reversible: true, dependsOnDecisionIds: [], premiseIds: ["pr_budget"] , output: { kind: "document", title: "季度预算申请总额", body: "Q4 预算申请总额：50 万\n\n其中留存专项预计 45 万（方案 A），其余 5 万作为机动。" } },
+      external: false, reversible: true, dependsOnDecisionIds: [], premiseIds: ["pr_budget"] , output: { kind: "document", title: "季度预算申请总额", body: "# Q4 预算申请\n\n- **申请总额**：50 万\n- **留存专项**：预计 45 万（方案 A）\n- **机动**：5 万" } },
   };
 
   const card = (id: string, title: string, stage: AgentState["workCards"][string]["stage"], extra: Partial<AgentState["workCards"][string]> = {}) => ({

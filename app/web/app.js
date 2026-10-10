@@ -451,12 +451,43 @@ const ICON_FILE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 const ICON_MSG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>`;
 const ICON_NOTE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>`;
 const fileName = (a) => `${(a.output?.title || a.label).replace(/[\\/:*?"<>|]/g, "-")}.md`;
+/** 轻量 Markdown 渲染（先转义再加标记，不执行任何 HTML） */
+function mdToHtml(src) {
+  const inline = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
+  const lines = String(src ?? "").replace(/\r/g, "").split("\n"), out = []; let i = 0;
+  const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^```/.test(l)) { const buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; out.push(`<pre><code>${esc(buf.join("\n"))}</code></pre>`); continue; }
+    if (/^\s*$/.test(l)) { i++; continue; }
+    let m;
+    if ((m = l.match(/^(#{1,4})\s+(.*)$/))) { const n = Math.min(m[1].length + 1, 5); out.push(`<h${n}>${inline(m[2])}</h${n}>`); i++; continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(l) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
+      const head = cells(l); i += 2; const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) rows.push(cells(lines[i++]));
+      out.push(`<table><thead><tr>${head.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`); continue;
+    }
+    if (/^\s*>/.test(l)) { const buf = []; while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, "")); out.push(`<blockquote>${buf.map(inline).join("<br>")}</blockquote>`); continue; }
+    if (/^\s*([-*·•]|\d+[.、)])\s+/.test(l)) {
+      const ol = /^\s*\d/.test(l), buf = [];
+      while (i < lines.length && /^\s*([-*·•]|\d+[.、)])\s+/.test(lines[i])) {
+        const ind = /^\s{2,}/.test(lines[i]); buf.push(`<li${ind ? ' class="sub"' : ""}>${inline(lines[i].replace(/^\s*([-*·•]|\d+[.、)])\s+/, ""))}</li>`); i++;
+      }
+      out.push(ol ? `<ol>${buf.join("")}</ol>` : `<ul>${buf.join("")}</ul>`); continue;
+    }
+    const buf = []; while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,4}\s|```|\s*([-*·•]|\d+[.、)])\s+|\s*>|\s*\|.*\|\s*$)/.test(lines[i])) buf.push(lines[i++]);
+    if (!buf.length) { buf.push(lines[i++]); }
+    out.push(`<p>${buf.map(inline).join("<br>")}</p>`);
+  }
+  return out.join("");
+}
 function previewModal() {
   const a = S.preview && st()?.actions[S.preview]; if (!a?.output) return "";
   return `<div class="modal-bg" data-act="close-preview"><div class="modal" role="dialog" aria-label="${esc(fileName(a))}" data-act="noop">
     <div class="modal-h">${ICON_FILE}<b>${esc(fileName(a))}</b><span style="flex:1"></span>
       <button class="btn sm mint" data-act="download-out" data-id="${a.id}">下载</button><button class="x-btn" data-act="close-preview" aria-label="关闭"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-    <pre class="modal-b">${esc(a.output.body)}</pre></div></div>`;
+    <div class="modal-b md">${mdToHtml(a.output.body)}</div></div></div>`;
 }
 const whyBtn = () => `<button class="why-btn ${S.why ? "on" : ""}" data-act="why" aria-expanded="${S.why}">${S.why ? ICON_CHEV_UP : ICON_CHEV_DOWN}依据</button>`;
 const ICON_PEN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>`;
@@ -494,7 +525,7 @@ function actionsBlock(c) {
         ? `<div class="omsg"><div class="omsg-h"><div><span class="faint">发给</span> ${esc(o.to || "—")}</div>${o.title ? `<div><span class="faint">主题</span> ${esc(o.title)}</div>` : ""}</div>
             <div class="omsg-b">${esc(o.body)}</div>
             <div class="omsg-f"><span class="faint s12">${a.status === "done" ? "已发出的原文" : "草稿还没发出，可以复制后自己发送"}</span><button class="choice sm" data-act="copy-out" data-id="${a.id}">复制</button></div></div>`
-        : `<div class="note-b">${esc(o.body)}</div>`;
+        : `<div class="note-b md">${mdToHtml(o.body)}</div>`;
     }
     return `<div class="li" style="flex-direction:column;align-items:stretch;gap:0"><div class="row" style="justify-content:space-between;gap:12px">
       <span class="row" style="gap:6px;min-width:0">${name}</span><span class="tag ${cls}">${l}</span></div>${body}</div>`; }).join("") || `<div class="s13 faint">还没有动作</div>`}</div></div>`;
