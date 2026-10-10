@@ -256,6 +256,18 @@ export class Workspace {
   confirm(proposalId: ID) {
     return this.run(async (s) => { const p = await confirmProposal(s, proposalId); await this.refreshPlans(s, [p]); return p; });
   }
+  cancelAction(actionId: ID) {
+    return this.run((s) => {
+      const a = s.actions[actionId]; if (!a) throw new Error("这个动作不存在");
+      if (a.status === "done") throw new Error("这件事已经做完了");
+      a.status = "cancelled";
+      const orig = a.compensationFor ? s.actions[a.compensationFor] : undefined;
+      const name = orig ? `「${orig.label}」的更正` : `「${a.label}」`;
+      emit(s, { type: "action_status_changed", actor: "user", workCardId: a.workCardId, summary: `你决定不发${name}`, payload: { actionId: a.id, status: "cancelled" } });
+      pushChat(s, a.workCardId, "agent", `好，${name}不发了，已经从待办里拿掉。之后需要的话跟我说一声，我再起草。`);
+      return a;
+    });
+  }
   rollback(eventId: ID) {
     return this.run(async (s) => {
       this.useLLM(1);

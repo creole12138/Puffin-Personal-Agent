@@ -88,6 +88,18 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
       execute: async () => { throw new Error("不应执行"); },
     },
     {
+      name: "cancel_action", label: "取消动作", description: "用户说某个还没做的动作不用做了（如「不用通知小李了」「这封更正不发了」）时调用，把卡上对应的动作取消。actionId 见工作状态里 actions 的 id。",
+      parameters: Type.Object({ actionId: Type.String(), reason: Type.Optional(Type.String()) }),
+      describe: (a, o) => (o === "done" ? `取消了「${state.actions[a?.actionId]?.label ?? "一个动作"}」` : ""),
+      execute: async (_id, p: any) => {
+        const a = state.actions[p.actionId];
+        if (!a || a.workCardId !== cardId) throw new Error(`动作 ${p.actionId} 不在这张卡上`);
+        if (a.status === "done") throw new Error("这个动作已经做完了，不能取消");
+        a.status = "cancelled"; card().updatedAt = now();
+        return { content: [{ type: "text", text: `已取消「${a.label}」` }], details: {} };
+      },
+    },
+    {
       name: "add_premise", label: "记下新前提", description: "用户提到一个新的、会影响这件事的事实（如面试时间、新的约束），而卡上还没有对应的前提时调用。只在值已经明确时使用。如果卡上已有说同一件事的前提（名字可能不同），不要用这个，改用 update_premise。",
       parameters: Type.Object({
         label: Type.String({ description: "如「面试时间」" }), value: Type.String({ description: "简短具体的值，≤12 字" }),

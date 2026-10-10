@@ -622,7 +622,7 @@ function rippleView(c, pc) {
     <div class="grid2" style="gap:12px">
       ${on.filter((i) => i.handling === "paused").map((i) => box("paused", "已暂停，等上面决定", i)).join("")}
       ${on.filter((i) => i.handling === "auto_updated").map((i) => box("auto", "已自动更新", i)).join("")}
-      ${on.filter((i) => i.handling === "compensate").map((i) => box("comp", "你已发出，需要补一句更正", i, comp(i) ? `<div class="s12" style="margin-top:6px">${comp(i).approvedAt ? "更正消息已确认，在右边可以复制去发送" : "我起草了一份更正，在右边等你确认"}</div>` : "")).join("")}
+      ${on.filter((i) => i.handling === "compensate").map((i) => box("comp", "你已发出，需要补一句更正", i, comp(i) ? `<div class="s12" style="margin-top:6px">${comp(i).status === "cancelled" ? "你决定不发更正" : comp(i).approvedAt ? "更正消息已确认，在右边可以复制去发送" : "我起草了一份更正，在右边等你确认"}</div>` : "")).join("")}
       ${on.filter((i) => i.handling === "unaffected").map((i) => box("keep", "仍然成立", i)).join("")}
     </div>
     ${other.length ? `<div class="also"><div class="s12 muted">同一项目里也受影响${c.projectId ? `（${esc(p?.label)}是${esc(s.projects[c.projectId]?.name)}的共享前提条件）` : ""}</div>
@@ -830,17 +830,18 @@ function proposalBlock(id) {
   if (pl?.status === "proposed" && pl.revision?.changes.some((x) => x.premiseId === p.change.premiseId) && p.status === "applied" && !p.drafts.length) return "";
   const done = p.status === "confirmed", gone = p.status === "corrected" || p.status === "dismissed";
   const draftsReady = p.drafts.filter((d) => d.actionId && s.actions[d.actionId]);
-  const needConfirm = p.status === "pending" || (p.status === "applied" && p.drafts.length > 0);
+  const allCancelled = p.drafts.length > 0 && p.drafts.every((d) => d.actionId && s.actions[d.actionId]?.status === "cancelled");
+  const needConfirm = p.status === "pending" || (p.status === "applied" && p.drafts.length > 0 && !allCancelled);
   const confirmLabel = p.status === "pending"
-    ? `确认改为 ${p.change.to}${p.drafts.length ? "，更正消息待我发送" : ""}`
+    ? `确认改为 ${p.change.to}${p.drafts.length && !allCancelled ? "，更正消息待我发送" : ""}`
     : "更正消息没问题，待我发送";
   return `<div class="prop ${gone ? "gone" : ""}">
     <div class="diff"><span class="d-lbl">${esc(p.change.label)}</span><span class="d-from">${esc(p.change.from)}</span><span class="d-arr" aria-hidden="true">→</span><span class="d-to">${esc(p.change.to)}</span>${p.status === "applied" && p.source !== "user" && !p.drafts.length ? `<span class="d-tag">已更新</span>` : ""}</div>
     ${p.drafts.map((d) => { const a = d.actionId ? s.actions[d.actionId] : null; return `<div class="draft" data-quotable="1"><div class="s11 muted">拟发给 ${esc(d.to)}</div><div>${esc(d.body)}</div>
-      ${done && a ? `<button class="link" data-act="copy" data-text="${esc(d.body)}">${S.copied === d.body ? "已复制" : "复制，去发送"}</button>` : ""}</div>`; }).join("")}
+      ${a?.status === "cancelled" ? `<div class="s11 muted">你决定不发了</div>` : `<div class="row" style="gap:12px">${done && a ? `<button class="link" data-act="copy" data-text="${esc(d.body)}">${S.copied === d.body ? "已复制" : "复制，去发送"}</button>` : ""}${a ? `<button class="link" style="color:var(--ink3)" data-act="cancel-act" data-id="${a.id}">不用发了</button>` : ""}</div>`}</div>`; }).join("")}
     ${gone ? `<div class="s11 muted">已按你的纠正处理</div>`
       : done ? `<div class="s11" style="color:var(--green)">✓ 已确认</div>`
-      : needConfirm ? `<div class="prop-act"><button class="btn mint" data-act="confirm-prop" data-id="${p.id}">${esc(confirmLabel)}</button><span class="s11 faint">不对？选中那句话，在下面告诉我</span></div>`
+      : needConfirm ? `<div class="prop-act"><button class="btn mint" data-act="confirm-prop" data-id="${p.id}">${esc(confirmLabel)}</button>${p.drafts.length && !allCancelled ? `<button class="link" style="color:var(--ink3)" data-act="confirm-nosend" data-id="${p.id}">${p.status === "pending" ? "只改条件，更正不用发" : "更正不用发了"}</button>` : ""}<span class="s11 faint">不对？选中那句话，在下面告诉我</span></div>`
       : `<div class="s11 faint">不对？选中那句话，在下面告诉我</div>`}
   </div>`;
 }
@@ -1020,6 +1021,14 @@ const actions = {
   "edit-save": (el) => withBusy("我看看这个变化会牵动哪些事", async () => { const r = await api(`/premises/${el.dataset.id}`, { value: S.editVal }); S.editing = null; if (r.result) reportChanges([r.result]); }),
   "own-open"(el) { S.ownFor = S.ownFor === el.dataset.id ? null : el.dataset.id; S.ownText = ""; render(); if (S.ownFor) $app.querySelector('[data-keep="own"]')?.focus(); },
   "resolve-own": (el) => { if (!S.ownText.trim()) return toast("写一下你想怎么做", true); return withBusy("好，按你说的来", async () => { await api(`/decisions/${el.dataset.id}/resolve`, { kind: "custom", statement: S.ownText.trim() }); S.ownFor = null; S.ownText = ""; S.showCard = true; }); },
+  "confirm-nosend": (el) => withBusy("好，只改条件，不发更正", async () => {
+    const id = el.dataset.id; await api(`/proposals/${id}/confirm`, {});
+    const r = await api(`/api/w/${S.wsId}`, undefined, "GET").catch(() => null);
+    const p = (r?.state ?? st()).proposals?.[id];
+    for (const d of p?.drafts ?? []) if (d.actionId) await api(`/actions/${d.actionId}/cancel`, {}).catch(() => {});
+    S.showCard = false;
+  }),
+  "cancel-act": (el) => withBusy("好，不发了", () => api(`/actions/${el.dataset.id}/cancel`, {})),
   resolve: (el) => withBusy("好，按你的决定来", async () => { await api(`/decisions/${el.dataset.id}/resolve`, { kind: el.dataset.kind }); S.showCard = true; }),
   "show-card"() { S.showCard = true; render(); },
   "show-ripple"() { S.showCard = false; render(); },
