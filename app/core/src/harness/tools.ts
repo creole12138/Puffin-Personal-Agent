@@ -43,6 +43,18 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
     card().updatedAt = now();
     return state.actions[id]!;
   };
+  /** 产出对应卡上已有的「计划中」动作时，直接挂到那个动作上，不再新建一条 */
+  const attach = (forAction: string | undefined, a: Omit<import("../types.ts").Action, "id" | "workCardId">) => {
+    const ex = forAction && card().actionIds.includes(forAction) ? state.actions[forAction] : undefined;
+    if (ex && !ex.output && ex.status !== "done") {
+      Object.assign(ex, { output: a.output, status: a.status, ...(a.doneAt ? { doneAt: a.doneAt } : {}) });
+      if (a.external) ex.external = true;
+      card().updatedAt = now();
+      return ex;
+    }
+    return addAction(a);
+  };
+  const forActionParam = Type.Optional(Type.String({ description: "如果这份产出就是卡上某个「计划中」动作要做的东西，填那个动作的 id（见工作状态里 actions 的 id），会直接完成那个动作而不是新增一条" }));
 
   return [
     {
@@ -57,20 +69,20 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
     },
     {
       name: "write_document", label: "起草文档", description: "起草一份内部文档（对比表、提纲、会议材料、清单等），保存到工作卡上供用户查看。不会发给任何人。",
-      parameters: Type.Object({ title: Type.String(), body: Type.String({ description: "Markdown 正文" }) }),
+      parameters: Type.Object({ title: Type.String(), body: Type.String({ description: "Markdown 正文" }), forAction: forActionParam }),
       describe: (a, o) => (o === "done" ? `起草了《${a?.title}》` : `没能起草《${a?.title}》`),
       execute: async (_id, p: any) => {
-        addAction({ label: `起草《${p.title}》`, status: "done", external: false, reversible: true, dependsOnDecisionIds: [],
+        attach(p.forAction, { label: `起草《${p.title}》`, status: "done", external: false, reversible: true, dependsOnDecisionIds: [],
           output: { kind: "document", title: p.title, body: p.body }, doneAt: now() });
         return { content: [{ type: "text", text: `已保存《${p.title}》到工作卡` }], details: {} };
       },
     },
     {
       name: "send_message", label: "发送消息", description: "给某人发消息或邮件。注意：本产品不会替用户发送，调用后会自动变成草稿交给用户确认。",
-      parameters: Type.Object({ to: Type.String(), subject: Type.String(), body: Type.String() }),
+      parameters: Type.Object({ to: Type.String(), subject: Type.String(), body: Type.String(), forAction: forActionParam }),
       requires: { permission: "send", source: "email" },
       describe: (a) => `起草了给 ${a?.to} 的消息，等你看过后由你发送`,
-      onDrafted: (p: any) => addAction({ label: `给 ${p.to} 的消息：${p.subject}`, status: "planned", external: true, reversible: false,
+      onDrafted: (p: any) => attach(p.forAction, { label: `给 ${p.to} 的消息：${p.subject}`, status: "planned", external: true, reversible: false,
         dependsOnDecisionIds: card().decisionIds.filter((d) => state.decisions[d]?.status === "valid"),
         output: { kind: "message", title: p.subject, body: p.body, to: p.to } }),
       execute: async () => { throw new Error("不应执行"); },
@@ -167,7 +179,7 @@ export function cardSummary(state: AgentState, cardId: ID) {
       project: c.projectId ? state.projects[c.projectId]?.name : null },
     premises: c.premiseIds.map((id) => state.premises[id]).filter(Boolean).map((p) => ({ id: p!.id, label: p!.label, value: p!.value, confirmed: p!.confirmed })),
     decisions: c.decisionIds.map((id) => state.decisions[id]).filter(Boolean).map((d) => ({ id: d!.id, statement: d!.statement, status: d!.status, premiseIds: d!.premiseIds })),
-    actions: c.actionIds.map((id) => state.actions[id]).filter(Boolean).map((a) => ({ label: a!.label, status: a!.status, external: a!.external })),
+    actions: c.actionIds.map((id) => state.actions[id]).filter(Boolean).map((a) => ({ id: a!.id, label: a!.label, status: a!.status, external: a!.external, hasOutput: !!a!.output })),
     openQuestions: c.openQuestions.map((q) => ({ question: q.question, answer: q.answer ?? null })),
     reminders: c.reminders.map((r) => ({ at: r.at, reason: r.reason })),
     materials: readableEvidence(state, cardId).map((id) => ({ id, title: state.evidence[id]!.title })),

@@ -139,7 +139,7 @@ export async function runPlan(state: AgentState, brains: Brains, cardId: ID) {
 
   const agent = createWorkAgent({ state, model: brains.model, getApiKey: brains.getApiKey, projectId: c.projectId,
     tools: cardTools({ state, cardId, assess: brains.assess }), workState: cardSummary(state, cardId),
-    systemPrompt: "用户已确认下面的执行计划，按步骤推进。每步用工具实际完成（起草文档要写出完整可用的内容）。对外消息只起草。完成后用两三句话告诉用户做了什么、还差什么、下一步是什么。" });
+    systemPrompt: "用户已确认下面的执行计划，按步骤推进。每步用工具实际完成（起草文档要写出完整可用的内容）。对外消息只起草。卡上已有「计划中」的动作时，起草它对应的产出要在 forAction 里填那个动作的 id，让它变成已完成，不要另起一条重复的动作；一份产出能覆盖一个动作就够了，不要拆成多份重复文档。完成后用两三句话告诉用户做了什么、还差什么、下一步是什么。" });
   await agent.prompt(`执行计划：\n${c.plan.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`);
   const reply = lastText(agent.state.messages) || (agent.state.errorMessage ? `执行中出了问题：${friendlyError(agent.state.errorMessage)}。` : "计划里的事做完了。");
   c.updatedAt = now();
