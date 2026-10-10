@@ -88,7 +88,7 @@ export function cardTools(ctx: ToolContext): WorkTool[] {
       execute: async () => { throw new Error("不应执行"); },
     },
     {
-      name: "add_premise", label: "记下新前提", description: "用户提到一个新的、会影响这件事的事实（如面试时间、新的约束），而卡上还没有对应的前提时调用。只在值已经明确时使用。",
+      name: "add_premise", label: "记下新前提", description: "用户提到一个新的、会影响这件事的事实（如面试时间、新的约束），而卡上还没有对应的前提时调用。只在值已经明确时使用。如果卡上已有说同一件事的前提（名字可能不同），不要用这个，改用 update_premise。",
       parameters: Type.Object({
         label: Type.String({ description: "如「面试时间」" }), value: Type.String({ description: "简短具体的值，≤12 字" }),
         userQuote: Type.String(), affectsDecisionIds: Type.Array(Type.String(), { description: "依赖它的决策 id，可为空" }),
