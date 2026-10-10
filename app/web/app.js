@@ -99,7 +99,7 @@ function render() {
 function landing() {
   return `<div class="landing">
     <div class="hero">${AV(84, 74)}<h1>我是云朵小管家。<br>把一件正在推进的事交给我。</h1></div>
-    <p class="lede">我记住的不是聊天记录，而是这件事的状态：在推进什么、依据是什么、哪些前提一变会影响什么。预算改了、会议挪了，我会告诉你哪些决定受影响、哪些动作已经暂停、哪些已经没法撤回。</p>
+    <p class="lede">我记住的不是聊天记录，而是这件事的状态：在推进什么、依据是什么、哪些前提一变会影响什么。预算改了、会议挪了，我会告诉你哪些决定受影响、哪些动作已经暂停、哪些已经发出去需要补一句更正。</p>
     <div class="pillars">
       <div class="pillar"><b>有来源</b><span class="muted s13">每条结论都能点开看依据来自哪份材料。</span></div>
       <div class="pillar"><b>有边界</b><span class="muted s13">只读你授权的范围；对外的事只起草，不替你发出。</span></div>
@@ -622,7 +622,7 @@ function rippleView(c, pc) {
     <div class="grid2" style="gap:12px">
       ${on.filter((i) => i.handling === "paused").map((i) => box("paused", "已暂停，等上面决定", i)).join("")}
       ${on.filter((i) => i.handling === "auto_updated").map((i) => box("auto", "已自动更新", i)).join("")}
-      ${on.filter((i) => i.handling === "compensate").map((i) => box("comp", "已执行，无法撤回", i, comp(i) ? `<div class="s12" style="margin-top:6px">${comp(i).approvedAt ? "更正消息已确认，在右边可以复制去发送" : "我起草了一份更正消息，在右边等你确认"}</div>` : "")).join("")}
+      ${on.filter((i) => i.handling === "compensate").map((i) => box("comp", "你已发出，需要补一句更正", i, comp(i) ? `<div class="s12" style="margin-top:6px">${comp(i).approvedAt ? "更正消息已确认，在右边可以复制去发送" : "我起草了一份更正，在右边等你确认"}</div>` : "")).join("")}
       ${on.filter((i) => i.handling === "unaffected").map((i) => box("keep", "仍然成立", i)).join("")}
     </div>
     ${other.length ? `<div class="also"><div class="s12 muted">同一项目里也受影响${c.projectId ? `（${esc(p?.label)}是${esc(s.projects[c.projectId]?.name)}的共享前提条件）` : ""}</div>
@@ -691,7 +691,7 @@ function timelineView() {
           <button class="btn" disabled title="下一版支持">从这里分叉</button>
         </div>
         ${S.rollbackNote ? `<div class="amber" style="line-height:1.7">回退只恢复工作状态，不撤回已发生的事：<br>${snap.premises.filter((p) => s.premises[p.id] && s.premises[p.id].value !== p.value).map((p) => `· ${esc(p.label)}的变化（${esc(p.value)} → ${esc(s.premises[p.id].value)}）仍在，回退后依赖它的决定会立即重新检查`).join("<br>")}
-          ${c.actionIds.map((id) => s.actions[id]).filter((a) => a?.external && a.status === "done").map((a) => `<br>· ${esc(a.label)}已经发生，无法撤回`).join("")}</div>` : ""}`
+          ${c.actionIds.map((id) => s.actions[id]).filter((a) => a?.external && a.status === "done").map((a) => `<br>· ${esc(a.label)}你已经发出去了，回到这时也收不回`).join("")}</div>` : ""}`
       : `<div class="muted">选择左边一个时间点，查看当时的工作卡。</div>`}
     </div>
   </div>`;

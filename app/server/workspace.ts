@@ -261,7 +261,7 @@ export class Workspace {
       this.useLLM(1);
       const r = await rollbackTo(s, eventId, this.brains.assess);
       const cardId = s.events.find((e) => e.id === eventId)?.workCardId;
-      if (cardId) pushChat(s, cardId, "agent", `已回到那个时间点的状态。${r.stillChanged.length ? `不过${r.stillChanged.join("，")}，我已经重新检查过。` : ""}${r.cannotUndo.length ? `已经发生的没法撤回：${r.cannotUndo.join("、")}。` : ""}`);
+      if (cardId) pushChat(s, cardId, "agent", `已回到那个时间点的状态。${r.stillChanged.length ? `不过${r.stillChanged.join("，")}，我已经重新检查过。` : ""}${r.cannotUndo.length ? `你已经发出去的（${r.cannotUndo.join("、")}）回不到之前，需要的话我可以起草更正。` : ""}`);
       return r;
     });
   }

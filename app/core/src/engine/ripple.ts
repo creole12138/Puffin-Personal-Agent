@@ -164,7 +164,7 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
         state.actions[comp.id] = comp;
         state.workCards[a.workCardId]?.actionIds.push(comp.id);
         emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
-          summary: `「${a.label}」已经发出，没法撤回；我起草了一份更正说明，等你确认`, payload: { actionId: comp.id, compensationFor: a.id, premiseChangeId: change.id } });
+          summary: `「${a.label}」你已经发出去了；我起草了一份更正，等你确认`, payload: { actionId: comp.id, compensationFor: a.id, premiseChangeId: change.id } });
       } else if (i.handling === "auto_updated") {
         emit(state, { type: "action_status_changed", actor: "agent", workCardId: a.workCardId,
           summary: `「${a.label}」已按新的 ${premise.label}重新计算`, payload: { actionId: a.id, autoUpdated: true, premiseChangeId: change.id } });

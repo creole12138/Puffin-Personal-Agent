@@ -85,7 +85,7 @@ export function seedQ4(): AgentState {
   emit(s, { type: "card_created", actor: "agent", workCardId: "wc_alex", projectId: "p_q4", summary: "根据你说的和聊天记录，整理出这张工作卡" });
   emit(s, { type: "grant_given", actor: "user", projectId: "p_q4", summary: "你允许我读取「对齐材料」文件夹（只用于 Q4 规划，只读）", payload: { grantId: "g_folder" } });
   emit(s, { type: "decision_made", actor: "user", workCardId: "wc_alex", summary: "你决定主推方案 A", payload: { decisionId: "d_planA" } });
-  emit(s, { type: "external_action_executed", actor: "agent", workCardId: "wc_alex", summary: "初版预算说明已发给小李", payload: { actionId: "a_noteLi" } });
+  emit(s, { type: "external_action_executed", actor: "user", workCardId: "wc_alex", summary: "你把初版预算说明发给了小李", payload: { actionId: "a_noteLi" } });
   s.events.forEach((e, k) => { if (at[k]) e.at = at[k]!; });
   return s;
 }
