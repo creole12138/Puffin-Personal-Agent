@@ -550,3 +550,8 @@ button.who:hover .home-ic{color:var(--mint)}
 .track .tk.t-warn.rb .tk-dot{background:#d29a3a}
 .track .tk.on .tk-dot{box-shadow:0 0 0 4px var(--green-bg);transform:scale(1.15)}
 .track-row::before{top:13px}
+
+.tk-guide{position:relative;align-self:flex-start;max-width:420px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7;display:flex;flex-direction:column;gap:6px;margin-top:4px;box-shadow:0 8px 24px rgba(27,43,51,.18);animation:hintin .3s ease-out}
+.tk-guide::before{content:"";position:absolute;left:22px;top:-5px;width:12px;height:12px;background:var(--ink);transform:rotate(45deg);border-radius:2px}
+.tk-guide .tk-legend{color:#fff}.tk-guide .lg.user{border-color:#C9D3D6}
+.tk-guide .btn{align-self:flex-end}

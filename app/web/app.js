@@ -651,21 +651,29 @@ function snapDiff(c, snap) {
   if ((snap.nextStep || "") !== (c.nextStep || "")) rows.push(["下一步", snap.nextStep || "—", c.nextStep || "—"]);
   return rows;
 }
+function tkGuide() {
+  let seen = false; try { seen = localStorage.getItem("puffin.tkGuide") === "1"; } catch {}
+  if (seen || S.tkGuideOff) return "";
+  return `<div class="tk-guide" role="note"><b>这是这件事的经历</b>
+    <div class="tk-legend"><span><i class="lg agent"></i>云朵小管家做的</span><span><i class="lg user"></i>你做的</span><span><i class="lg warn"></i>条件变化</span></div>
+    <div>实心的节点可以回到那时；悬停看是什么事，点开看当时和现在的差别。</div>
+    <button class="btn sm mint" data-act="tk-guide-ok">知道了</button></div>`;
+}
 function trackStrip(c) {
   const s = st(), evs = cardEvents(s, c).filter((e) => TRACK_TYPES.has(e.type)); if (!evs.length) return "";
   const pick = S.tlEvent ? evs.find((e) => e.id === S.tlEvent) : null;
   const dot = (e) => `<button class="tk ${pick?.id === e.id ? "on" : ""} ${e.payload.snapshot && snapDiff(c, e.payload.snapshot).length ? "rb" : ""} t-${e.type === "premise_changed" ? "warn" : e.actor === "user" ? "user" : "agent"}" data-act="tk" data-id="${e.id}" aria-label="${esc(e.summary)}">
       <span class="tk-dot"></span><span class="tk-d">${shortDate(e.at)}</span><span class="tk-tip">${esc(e.summary)}</span></button>`;
   return `<div class="track"><div class="track-row">${evs.map(dot).join("")}<span class="tk now"><span class="tk-dot"></span><span class="tk-d">现在</span></span></div>
-    ${pick ? trackDetail(c, pick) : `<div class="tk-legend"><span><i class="lg agent"></i>云朵小管家</span><span><i class="lg user"></i>你</span><span><i class="lg warn"></i>条件变化</span><span class="faint">· 实心的节点可以回到那时，悬停看是什么事</span></div>`}</div>`;
+    ${pick ? trackDetail(c, pick) : tkGuide()}</div>`;
 }
 function trackDetail(c, e) {
   const s = st(), snap = e.payload.snapshot, who = { user: "你", agent: "云朵小管家", watcher: "云朵小管家" }[e.actor];
   const head = `<div class="tkd-h"><span><b>${esc(e.summary)}</b><span class="faint s12"> · ${who} · ${timeAgo(e.at)}</span></span><button class="choice sm" data-act="tk" data-id="${e.id}">收起</button></div>`;
-  if (!snap) return `<div class="tkd">${head}<div class="s13 muted">这是一条记录，没有可以回去的状态。</div></div>`;
+  if (!snap) return `<div class="tkd">${head}</div>`;
   const rows = snapDiff(c, snap);
   const body = rows.length ? `<table class="tkd-t"><tr><th></th><th>那时</th><th>现在</th></tr>${rows.map(([k, a, b]) => `<tr><td>${esc(k)}</td><td>${esc(a)}</td><td><b>${esc(b)}</b></td></tr>`).join("")}</table>`
-    : `<div class="s13 muted">那时的工作状态和现在一样，不需要回去。</div>`;
+    : "";
   const note = S.rollbackNote && rows.length ? `<div class="amber s13" style="line-height:1.7">回到这时只恢复工作状态，不会撤回已经发生的事${c.actionIds.map((id) => s.actions[id]).filter((a) => a?.external && a.status === "done").map((a) => `；${esc(a.label)}已经发出`).join("")}。之后变化过的条件会重新检查。</div>` : "";
   return `<div class="tkd">${head}${body}${note}${rows.length ? `<div><button class="btn sm ${S.rollbackNote ? "dark" : ""}" data-act="rollback" data-id="${e.id}">${S.rollbackNote ? "确认回到这时" : "回到这时"}</button></div>` : ""}</div>`;
 }
@@ -911,6 +919,7 @@ const actions = {
   async create() { const r = await api("/api/workspaces", {}); go(r.id); },
   home() { S.view = "home"; S.sel = null; S.proj = null; render(); },
   open(el) { if (S.hint?.cardId === el.dataset.id) S.hint = null; openCard(el.dataset.id); render(); },
+  "tk-guide-ok"() { S.tkGuideOff = true; try { localStorage.setItem("puffin.tkGuide", "1"); } catch {} render(); },
   "hint-x"() { S.hint = null; render(); },
   project(el) { S.proj = el.dataset.id; S.view = "project"; render(); },
   demo() { S.view = "demo"; S.tour = 0; S.tourDecided = false; render(); },
