@@ -608,3 +608,4 @@ button.who:hover .home-ic{color:var(--mint)}
 @media (max-width:900px){.pcs{grid-template-columns:1fr 1fr}}
 .pc-ok{color:var(--green);font-weight:700;font-size:15px;padding:0 4px}
 .pcs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.panel > .sec-h{margin-bottom:12px;flex-wrap:wrap}

@@ -103,30 +103,37 @@ function calName(url: string, name: string) {
 }
 
 type Snapshot = Record<string, CalEvent>;
+const calRef = (pid?: string, cid?: string) => cid ? `calendar:${cid}` : pid ? `calendar:${pid}` : "calendar";
 
 export class CalendarWatcher {
   private timer?: NodeJS.Timeout;
   constructor(private mgr: WorkspaceManager, private everySeconds: number) {}
 
-  private grantsOf(ws: Workspace, projectId?: string | null) {
-    return Object.values(ws.state.grants).filter((g) => g.source === "calendar" && !g.revokedAt && (projectId === undefined || (g.filter?.projectId ?? null) === projectId));
+  /** 都不传：全部；cardId：只看这个任务的；projectId（含 null）：项目级 / 工作区级（不含任务级） */
+  private grantsOf(ws: Workspace, projectId?: string | null, cardId?: string) {
+    return Object.values(ws.state.grants).filter((g) => g.source === "calendar" && !g.revokedAt && (
+      cardId ? g.filter?.cardId === cardId
+      : projectId === undefined ? true
+      : !g.filter?.cardId && (g.filter?.projectId ?? null) === projectId));
   }
 
   /** projectId 为空：Puffin 的连接（所有项目可用）；否则只给这个项目 */
-  async connect(ws: Workspace, url: string, projectId?: string) {
+  async connect(ws: Workspace, url: string, projectId?: string, cardId?: string) {
     const events = await fetchICS(url);
     const label = calName(url, lastName);
     const snapshot: Snapshot = Object.fromEntries(events.map((e) => [e.uid, e]));
-    const pname = projectId ? ws.state.projects[projectId]?.name : "";
-    const g = await ws.grant({ source: "calendar", scopeLabel: `读取并持续关注${label}（只读${projectId ? `，仅「${pname}」` : ""}）`, filter: { url, label, snapshot, lastCheckedAt: new Date().toISOString(), ...(projectId ? { projectId } : {}) }, permissions: ["read", "watch"] });
+    if (cardId && !ws.state.workCards[cardId]) throw new Error("工作卡不存在");
+    if (cardId) projectId = undefined;
+    const pname = projectId ? ws.state.projects[projectId]?.name : cardId ? ws.state.workCards[cardId]?.title : "";
+    const g = await ws.grant({ source: "calendar", scopeLabel: `读取并持续关注${label}（只读${pname ? `，仅「${pname}」` : ""}）`, filter: { url, label, snapshot, lastCheckedAt: new Date().toISOString(), ...(projectId ? { projectId } : {}), ...(cardId ? { cardId } : {}) }, permissions: ["read", "watch"] });
     const upcoming = events.filter(inWindow).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 40);
     const text = upcoming.map((e) => `- ${e.start}${e.end ? ` ~ ${e.end.slice(11)}` : ""}｜${e.summary}${e.location ? `｜${e.location}` : ""}${e.status === "CANCELLED" ? "｜已取消" : ""}`).join("\n");
-    await ws.addMaterial({ title: `日历${pname ? `（${pname}）` : ""}（接下来 ${WINDOW_DAYS} 天）`, text: text || "（近期没有日程）", source: "calendar", ref: projectId ? `calendar:${projectId}` : "calendar" });
+    await ws.addMaterial({ title: `日历${pname ? `（${pname}）` : ""}（接下来 ${WINDOW_DAYS} 天）`, text: text || "（近期没有日程）", source: "calendar", ref: calRef(projectId, cardId) });
     return { grantId: g.id, events: upcoming.length };
   }
 
-  async checkNow(ws: Workspace, projectId?: string | null) {
-    const gs = this.grantsOf(ws, projectId);
+  async checkNow(ws: Workspace, projectId?: string | null, cardId?: string) {
+    const gs = this.grantsOf(ws, projectId, cardId);
     if (!gs.length) throw new Error("还没有连接日历");
     const all: string[] = [];
     for (const g of gs) {
@@ -137,8 +144,9 @@ export class CalendarWatcher {
         gg.filter = { ...gg.filter, snapshot: Object.fromEntries(events.map((e) => [e.uid, e])), lastCheckedAt: new Date().toISOString() };
         if (!changes.length) emit(s, { type: "evidence_observed", actor: "watcher", visibleInTimeline: false, summary: "日历没有变化", payload: {} });
       });
-      const pid = g.filter?.projectId as string | undefined;
-      if (changes.length) await ws.addMaterial({ title: `日历变化${pid ? `（${ws.state.projects[pid]?.name ?? ""}）` : ""}`, text: changes.join("\n"), source: "calendar", ref: pid ? `calendar:${pid}` : "calendar" });
+      const pid = g.filter?.projectId as string | undefined, cid = g.filter?.cardId as string | undefined;
+      const nm = cid ? ws.state.workCards[cid]?.title : pid ? ws.state.projects[pid]?.name : "";
+      if (changes.length) await ws.addMaterial({ title: `日历变化${nm ? `（${nm}）` : ""}`, text: changes.join("\n"), source: "calendar", ref: calRef(pid, cid) });
       all.push(...changes);
     }
     const latest = gs.flatMap((g) => Object.values((ws.state.grants[g.id]?.filter.snapshot ?? {}) as Snapshot)).filter(inWindow).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 3).map((e) => `${e.summary} ${e.start}`);

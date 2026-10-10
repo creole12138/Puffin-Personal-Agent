@@ -65,8 +65,8 @@ const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/proposals\/([\w-]+)\/confirm$/, (ws, _b, m) => ws.confirm(m[1]!)],
   ["POST", /^\/events\/([\w-]+)\/rollback$/, (ws, _b, m) => ws.rollback(m[1]!)],
   ["POST", /^\/grants\/([\w-]+)\/revoke$/, (ws, _b, m) => ws.revoke(m[1]!)],
-  ["POST", /^\/calendar$/, async (ws, b) => calendar.connect(ws, String(b.url || ""), b.projectId ? String(b.projectId) : undefined)],
-  ["POST", /^\/calendar\/check$/, async (ws, b) => calendar.checkNow(ws, b?.projectId === undefined ? undefined : (b.projectId || null))],
+  ["POST", /^\/calendar$/, async (ws, b) => calendar.connect(ws, String(b.url || ""), b.projectId ? String(b.projectId) : undefined, b.cardId ? String(b.cardId) : undefined)],
+  ["POST", /^\/calendar\/check$/, async (ws, b) => calendar.checkNow(ws, b?.projectId === undefined ? undefined : (b.projectId || null), b?.cardId ? String(b.cardId) : undefined)],
 ];
 
 const server = createServer(async (req, res) => {

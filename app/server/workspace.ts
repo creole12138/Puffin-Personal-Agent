@@ -241,6 +241,7 @@ export class Workspace {
       s.chats ??= {};
       s.chats[r.card.id] = [...(s.chats[cardId] ?? []), { role: "agent", text: r.card.openQuestions.length ? `理了一版，有 ${r.card.openQuestions.length} 处拿不准，标在卡上了。` : "理了一版，你看看对不对。", at: new Date().toISOString() }];
       r.card.reminders.push(...cand.reminders);
+      for (const g of Object.values(s.grants)) if (g.filter?.cardId === cardId) g.filter = { ...g.filter, cardId: r.card.id };
       delete s.workCards[cardId]; delete s.chats[cardId];
       if (cand.projectId) { const p = s.projects[cand.projectId]; if (p) p.workCardIds = p.workCardIds.filter((x) => x !== cardId); }
       return r.card;

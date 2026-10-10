@@ -184,7 +184,7 @@ function nav() {
   const s = st(), projects = Object.values(s.projects), loose = cardsOf(null);
   const taskBtn = (c) => `<button class="task ${S.view === "card" && S.sel === c.id ? "on" : ""} ${S.hint?.cardId === c.id ? "hinted" : ""}" data-act="open" data-id="${c.id}">${esc(c.title)}${c.stage === "candidate" ? "" : `<span class="st"> · ${STAGE[c.stage][0]}</span>`}${needsYou(c) ? `<span class="flag"> · 待决定</span><i class="pulse" aria-hidden="true"></i>` : ""}</button>`;
   const grants = Object.values(s.grants).filter((g) => !g.revokedAt && g.source !== "user_input");
-  const cal = grants.find((g) => g.source === "calendar" && !g.filter?.projectId);
+  const cal = grants.find((g) => g.source === "calendar" && !g.filter?.projectId && !g.filter?.cardId);
   const mats = Object.values(s.evidence).filter((e) => !["chat", "edit"].includes(e.ref)).length;
   return `
   ${projects.length ? `<div class="nav-title">项目</div>` : ""}
@@ -205,11 +205,11 @@ function nav() {
 }
 
 /** 已连接来源（本机文件夹、日历）里的最新材料，新开的事都能读到 */
-function connectedEvidenceIds(pid) {
-  const s = st(), ids = [];
-  for (const F of [S.folder, pid ? S.pfolders?.[pid] : null].filter(Boolean)) for (const f of Object.values(F.files ?? {})) { const e = f.evidenceId && s.evidence[f.evidenceId]; if (e) ids.push((latestOf(e.ref) ?? e).id); }
-  if (Object.values(s.grants).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId)) { const c = Object.values(s.evidence).filter((e) => e.ref === "calendar").sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1); if (c) ids.push(c.id); }
-  if (pid) { const c = Object.values(s.evidence).filter((e) => e.ref === `calendar:${pid}`).sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1); if (c) ids.push(c.id); }
+function connectedEvidenceIds(pid, cid) {
+  const s = st(), ids = [], scopes = [pid, cid, ...(pid ? cardsOf(pid).map((c) => c.id) : [])].filter(Boolean);
+  for (const F of [S.folder, ...scopes.map((k) => S.pfolders?.[k])].filter(Boolean)) for (const f of Object.values(F.files ?? {})) { const e = f.evidenceId && s.evidence[f.evidenceId]; if (e) ids.push((latestOf(e.ref) ?? e).id); }
+  if (Object.values(s.grants).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId)) { const c = Object.values(s.evidence).filter((e) => e.ref === "calendar").sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1); if (c) ids.push(c.id); }
+  for (const k of scopes) { const c = Object.values(s.evidence).filter((e) => e.ref === `calendar:${k}`).sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1); if (c) ids.push(c.id); }
   return [...new Set(ids)];
 }
 
@@ -223,7 +223,7 @@ const CAL_HELP = {
   other: ["其他", ["任何能导出 .ics 订阅链接（以 https:// 或 webcal:// 开头）的日历都可以", "只读：我只看日程，不会修改你的日历"], "更新延迟：取决于日历服务商多久刷新一次订阅链接"],
 };
 function calConnect(where, pid) {
-  const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId);
+  const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId);
   if (cal && !pid) return `<div class="calc ok">${cIcon("cal")}<span>日历已连接，日程有变化我会提醒你</span></div>`;
   const tab = S.calTab ?? "icloud", h = CAL_HELP[tab];
   return `<div class="calc">
@@ -248,7 +248,7 @@ const CI = {
 const cIcon = (k) => { const [bg, fg, d] = CI[k]; return `<span class="cn-ic" style="background:${bg};color:${fg}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg></span>`; };
 function connectors(grants, cal) {
   const row = (k, name, status, right, cls = "") => `<div class="cn ${cls}">${cIcon(k)}<div class="cn-t"><div>${name}</div>${status ? `<div class="cn-s">${status}</div>` : ""}</div>${right}</div>`;
-  const fGrants = grants.filter((g) => g.source === "local_folder" && g.filter?.where !== "example" && g.id !== "g_folder" && !g.filter?.projectId && !g.projectId);
+  const fGrants = grants.filter((g) => g.source === "local_folder" && g.filter?.where !== "example" && g.id !== "g_folder" && !g.filter?.projectId && !g.filter?.cardId && !g.projectId);
   const exGrant = grants.find((g) => g.source === "local_folder" && (g.filter?.where === "example" || g.id === "g_folder"));
   const folder = S.folder
     ? row("folder", "本机项目文件夹", `「${esc(S.folder.name)}」· 网页开着时检查`, `<button class="link" data-act="folder-stop">停止</button>`, "on")
@@ -370,7 +370,7 @@ function vfModal() {
 }
 function visibleScenes() {
   const refs = new Set(Object.values(st()?.evidence ?? {}).map((e) => e.ref));
-  const cal = Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId);
+  const cal = Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId);
   const used = [];
   if (refs.has("email") || cal) used.push("today");
   if (refs.has("github") || refs.has("release")) used.push("release");
@@ -403,7 +403,7 @@ function sceneModal() {
 
 // ---------- 首页 ----------
 function startCards() {
-  const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId);
+  const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId);
   const card = (act, t, sub, extra = "") => `<button class="prompt" data-act="${act}"><b>${t}</b><small>${sub}</small>${extra}</button>`;
   const c2 = S.folder ? `<div class="prompt done"><b>接管项目文件夹</b><small>正在关注「${esc(S.folder.name)}」，有变动会提醒你</small></div>`
     : "showDirectoryPicker" in window ? card("folder", "接管项目文件夹", "丝滑推进项目执行")
@@ -464,7 +464,7 @@ function home() {
       <textarea rows="3" aria-label="说一件事" placeholder="跟 Puffin 直接说说，比如：帮我一起脑暴一个设计方案&#10;也可以直接把相关文件拖进来，我帮你总结" data-bind="ask" data-keep="ask">${esc(S.ask)}</textarea>
       ${S.calWhere === "composer" ? calConnect("composer") : ""}
       <div class="composer-f">
-        <div class="chips">${!S.folder && "showDirectoryPicker" in window ? `<button class="chip-btn" data-act="folder">${cIcon("folder")}连接文件夹</button>` : ""}${!Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId) ? `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>` : ""}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
+        <div class="chips">${!S.folder && "showDirectoryPicker" in window ? `<button class="chip-btn" data-act="folder">${cIcon("folder")}连接文件夹</button>` : ""}${!Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId) ? `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>` : ""}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
         <button class="btn mint lg" data-act="tell">Tell me</button>
       </div>
     </div>
@@ -663,6 +663,7 @@ function activeView(c) {
     </div>
     <div class="panel pad24">${actionsBlock(c)}</div>
     ${vfPanel(c)}
+    ${c.stage === "candidate" ? "" : cardConnections(c)}
     <div class="cta2">
       ${canSim ? `<button class="demo play" data-act="sim-pr"><img src="/play.svg" alt="" width="40" height="40"><span><b>模拟一次变化：Git 仓库中 #412 支付流程 PR 合并了</b><small>看看我会怎么发现变化、调整风险判断</small></span></button>`
         : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>${S.demoSent ? "已模拟：新预算表放进了文件夹" : "演示：小王发来新的预算表"}</b><small>${S.demoSent ? "我在后台看，看完会来找你，你可以先去别处" : "模拟他把 30 万的新预算表放进「对齐材料」文件夹"}</small></span></button>`
@@ -782,20 +783,53 @@ function timelineView() {
 }
 
 // ---------- 项目 ----------
+const connItem = (k, name, status, right, cls = "") => `<div class="pc ${cls}">${cIcon(k)}<div class="cn-t"><div>${name}</div>${status ? `<div class="cn-s">${status}</div>` : ""}</div>${right}</div>`;
+const CONN_OK = `<span class="pc-ok">✓</span>`;
+/** 某个范围（项目 id 或任务 id）自己连的日历 / 文件夹 */
+const scopeCal = (k) => Object.values(st().grants).find((g) => g.source === "calendar" && !g.revokedAt && (g.filter?.cardId === k || (!g.filter?.cardId && g.filter?.projectId === k)));
+const wsCalGrant = () => Object.values(st().grants).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId);
+const ownCalRow = (g, k) => connItem("cal", esc(calLabel(g)), g.filter.lastCheckedAt ? `${timeAgo(g.filter.lastCheckedAt)}检查过` : "", `<span class="row" style="gap:8px"><button class="link" data-act="pcal-check" data-id="${k}">检查</button><button class="link" data-act="revoke" data-id="${g.id}">断开</button></span>`, "on");
+const ownFolderRow = (F, k) => connItem("folder", `本机文件夹「${esc(F.name)}」`, "网页开着时检查", `<button class="link" data-act="pfolder-stop" data-id="${k}">停止</button>`, "on");
 function projConnections(p) {
   const s = st(), grants = Object.values(s.grants).filter((g) => !g.revokedAt);
-  const wsCal = grants.find((g) => g.source === "calendar" && !g.filter?.projectId), pCal = grants.find((g) => g.source === "calendar" && g.filter?.projectId === p.id), pf = S.pfolders?.[p.id];
+  const wsCal = wsCalGrant(), pCal = scopeCal(p.id), pf = S.pfolders?.[p.id];
   const ex = grants.find((g) => g.source === "local_folder" && (g.projectId === p.id || g.filter?.projectId === p.id) && (g.filter?.where === "example" || g.id === "g_folder"));
-  const item = (k, name, status, right, cls = "") => `<div class="pc ${cls}">${cIcon(k)}<div class="cn-t"><div>${name}</div>${status ? `<div class="cn-s">${status}</div>` : ""}</div>${right}</div>`;
-  const ok = `<span class="pc-ok">✓</span>`;
-  const folder = S.folder ? item("folder", `本机文件夹「${esc(S.folder.name)}」`, "", ok, "on")
-    : pf ? item("folder", `本机文件夹「${esc(pf.name)}」`, "网页开着时检查", `<button class="link" data-act="pfolder-stop" data-id="${p.id}">停止</button>`, "on")
-    : ex ? item("folder", "示例文件夹「对齐材料」", "", ok, "on")
-    : "showDirectoryPicker" in window ? item("folder", "本机文件夹", "", `<button class="cn-btn" data-act="pfolder" data-id="${p.id}">连接</button>`) : "";
-  const cal = wsCal ? item("cal", esc(calLabel(wsCal)), "", ok, "on")
-    : pCal ? item("cal", esc(calLabel(pCal)), pCal.filter.lastCheckedAt ? `${timeAgo(pCal.filter.lastCheckedAt)}检查过` : "", `<span class="row" style="gap:8px"><button class="link" data-act="pcal-check" data-id="${p.id}">检查</button><button class="link" data-act="revoke" data-id="${pCal.id}">断开</button></span>`, "on")
-    : item("cal", "日历", "", `<button class="cn-btn" data-act="pcal-open" data-id="${p.id}">${S.pcalOpen === p.id ? "取消" : "连接"}</button>`);
-  return `<div class="sec-h">这个项目的连接</div><div class="pcs">${folder}${cal}</div>${S.pcalOpen === p.id && !wsCal && !pCal ? calConnect("proj", p.id) : ""}`;
+  // 项目里各任务自己连的，项目默认一起用
+  const fromCards = cardsOf(p.id).flatMap((c) => { const g = scopeCal(c.id), F = S.pfolders?.[c.id], from = `来自任务「${esc(c.title)}」`;
+    return [F ? connItem("folder", `本机文件夹「${esc(F.name)}」`, from, CONN_OK, "on") : "", g ? connItem("cal", esc(calLabel(g)), from, CONN_OK, "on") : ""]; }).filter(Boolean);
+  const cardFolder = cardsOf(p.id).some((c) => S.pfolders?.[c.id]), cardCal = cardsOf(p.id).some((c) => scopeCal(c.id));
+  const folder = S.folder ? connItem("folder", `本机文件夹「${esc(S.folder.name)}」`, "", CONN_OK, "on")
+    : pf ? ownFolderRow(pf, p.id)
+    : ex ? connItem("folder", "示例文件夹「对齐材料」", "", CONN_OK, "on")
+    : !cardFolder && "showDirectoryPicker" in window ? connItem("folder", "本机文件夹", "", `<button class="cn-btn" data-act="pfolder" data-id="${p.id}">连接</button>`) : "";
+  const cal = wsCal ? connItem("cal", esc(calLabel(wsCal)), "", CONN_OK, "on")
+    : pCal ? ownCalRow(pCal, p.id)
+    : !cardCal ? connItem("cal", "日历", "", `<button class="cn-btn" data-act="pcal-open" data-id="${p.id}">${S.pcalOpen === p.id ? "取消" : "连接"}</button>`) : "";
+  return `<div class="sec-h">这个项目的连接</div><div class="pcs">${folder}${cal}${fromCards.join("")}</div>${S.pcalOpen === p.id && !wsCal && !pCal ? calConnect("proj", p.id) : ""}`;
+}
+/** 任务级连接：只给这件事用；归入项目后，项目里的其他任务也能用 */
+function cardConnections(c) {
+  const s = st(), p = c.projectId ? s.projects[c.projectId] : null, rows = [];
+  const wsCal = wsCalGrant(), own = scopeCal(c.id), ownF = S.pfolders?.[c.id];
+  const ex = p && Object.values(s.grants).find((g) => !g.revokedAt && g.source === "local_folder" && (g.projectId === p.id || g.filter?.projectId === p.id) && (g.filter?.where === "example" || g.id === "g_folder"));
+  let hasF = false, hasC = false;
+  if (S.folder) { rows.push(connItem("folder", `本机文件夹「${esc(S.folder.name)}」`, "Puffin 的连接", CONN_OK, "on")); hasF = true; }
+  if (wsCal) { rows.push(connItem("cal", esc(calLabel(wsCal)), "Puffin 的连接", CONN_OK, "on")); hasC = true; }
+  if (p) {
+    const from = `来自项目「${esc(p.name)}」`, pf = S.pfolders?.[p.id], pc = scopeCal(p.id);
+    if (pf) { rows.push(connItem("folder", `本机文件夹「${esc(pf.name)}」`, from, CONN_OK, "on")); hasF = true; }
+    if (ex) { rows.push(connItem("folder", "示例文件夹「对齐材料」", from, CONN_OK, "on")); hasF = true; }
+    if (pc) { rows.push(connItem("cal", esc(calLabel(pc)), from, CONN_OK, "on")); hasC = true; }
+    for (const o of cardsOf(p.id)) if (o.id !== c.id) {
+      const F = S.pfolders?.[o.id], g = scopeCal(o.id);
+      if (F) { rows.push(connItem("folder", `本机文件夹「${esc(F.name)}」`, from, CONN_OK, "on")); hasF = true; }
+      if (g) { rows.push(connItem("cal", esc(calLabel(g)), from, CONN_OK, "on")); hasC = true; }
+    }
+  }
+  if (ownF) rows.push(ownFolderRow(ownF, c.id)); else if (!hasF && "showDirectoryPicker" in window) rows.push(connItem("folder", "本机文件夹", "", `<button class="cn-btn" data-act="pfolder" data-id="${c.id}">连接</button>`));
+  if (own) rows.push(ownCalRow(own, c.id)); else if (!hasC) rows.push(connItem("cal", "日历", "", `<button class="cn-btn" data-act="pcal-open" data-id="${c.id}">${S.pcalOpen === c.id ? "取消" : "连接"}</button>`));
+  if (!rows.length) return "";
+  return `<div class="panel pad24"><div class="sec-h">这件事的连接<small>${p ? "这里连的，项目里的其他工作也能用" : "只给这件事用；归入项目后，项目里的其他工作也能用"}</small></div><div class="pcs">${rows.join("")}</div>${S.pcalOpen === c.id && !own ? calConnect("card", c.id) : ""}</div>`;
 }
 function projectView() {
   const s = st(), p = s.projects[S.proj], cs = cardsOf(p.id);
@@ -986,8 +1020,8 @@ const folderKey = () => `folder:${S.wsId}`;
 const stem = (n) => n.replace(/[-_ ]?v\d+(?=\.\w+$)/i, "");
 async function pickFolder(pid) {
   let handle; try { handle = await window.showDirectoryPicker({ mode: "read" }); } catch { return; }
-  const pname = pid ? st().projects[pid]?.name : "";
-  const g = await api("/grants", { source: "local_folder", scopeLabel: `读取本机文件夹「${handle.name}」（只读，网页开着时${pid ? `，仅「${pname}」` : ""}）`, filter: { dir: handle.name, where: "browser", ...(pid ? { projectId: pid } : {}) }, permissions: ["read", "watch"] });
+  const isCard = !!(pid && st().workCards[pid]), pname = pid ? (isCard ? st().workCards[pid].title : st().projects[pid]?.name) : "";
+  const g = await api("/grants", { source: "local_folder", scopeLabel: `读取本机文件夹「${handle.name}」（只读，网页开着时${pid ? `，仅「${pname}」` : ""}）`, filter: { dir: handle.name, where: "browser", ...(pid ? (isCard ? { cardId: pid } : { projectId: pid }) : {}) }, permissions: ["read", "watch"] });
   const key = pid ? `${folderKey()}:${pid}` : folderKey();
   let files = {}; try { const saved = JSON.parse(store.get(key) || "null"); if (saved?.name === handle.name) files = saved.files; } catch {}
   const F = { handle, name: handle.name, grantId: g.result.id, files, key, pid };
@@ -1044,7 +1078,7 @@ const actions = {
   },
   "cand-draft": (el) => withBusy("我在看你说的话和材料，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
     const { ids } = await upload(S.candAttach);
-    const r = await api(`/cards/${el.dataset.id}/draft`, { evidenceIds: [...ids, ...connectedEvidenceIds(st().workCards[el.dataset.id]?.projectId)] });
+    const r = await api(`/cards/${el.dataset.id}/draft`, { evidenceIds: [...ids, ...connectedEvidenceIds(st().workCards[el.dataset.id]?.projectId, el.dataset.id)] });
     S.candAttach = []; openCard(r.result.id);
   }),
   remind: (el) => withBusy("好，明天提醒你", () => api(`/cards/${el.dataset.id}/remind`, {})),
@@ -1112,7 +1146,7 @@ const actions = {
   "scene-go"() {
     const c = SCENES[S.scene], v = S.sceneIn;
     const filled = c.inputs.filter((i) => (v[i.key] ?? "").trim());
-    const calOn = (S.scene === "today" || S.scene === "fitness") && Object.values(st().grants).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId);
+    const calOn = (S.scene === "today" || S.scene === "fitness") && Object.values(st().grants).some((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId);
     if (!filled.length && !calOn) return toast("还没有可以读的信息：连上日历、粘贴一点内容，或者直接点「用示例数据试试」", true);
     const sid = S.scene; S.scene = null;
     return withBusy("我在看你给的信息，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
@@ -1186,11 +1220,11 @@ const actions = {
   revoke: (el) => withBusy("好，我不再看那里了", async () => { const g = st().grants[el.dataset.id]; await api(`/grants/${el.dataset.id}/revoke`, {}); if (g?.source === "local_folder" && S.folder?.grantId === g.id) S.folder = null; for (const [k, F] of Object.entries(S.pfolders ?? {})) if (F.grantId === g?.id) delete S.pfolders[k]; }),
   folder: () => pickFolder().catch((e) => toast(e.message, true)),
   "pcal-open"(el) { S.pcalOpen = S.pcalOpen === el.dataset.id ? null : el.dataset.id; render(); },
-  "pcal-check": (el) => withBusy("我看一眼这个项目的日历", async () => { const r = await api("/calendar/check", { projectId: el.dataset.id }); if (!r.result.changes.length) toast(`日历链接里还没有新变化。我刚读到的是：${(r.result.latest ?? []).join("；") || "近期没有日程"}。Google 日历的链接常要几十分钟才更新`); }),
+  "pcal-check": (el) => withBusy("我看一眼日历", async () => { const k = el.dataset.id; const r = await api("/calendar/check", st().workCards[k] ? { cardId: k } : { projectId: k }); if (!r.result.changes.length) toast(`日历链接里还没有新变化。我刚读到的是：${(r.result.latest ?? []).join("；") || "近期没有日程"}。Google 日历的链接常要几十分钟才更新`); }),
   pfolder: (el) => pickFolder(el.dataset.id).catch((e) => toast(e.message, true)),
   "pfolder-stop"(el) { const F = S.pfolders?.[el.dataset.id]; if (!F) return; delete S.pfolders[el.dataset.id]; if (F.grantId) actions.revoke({ dataset: { id: F.grantId } }); else render(); },
   "folder-stop"() { const id = S.folder?.grantId; S.folder = null; if (id) actions.revoke({ dataset: { id } }); else render(); },
-  cal: (el) => withBusy("我看一眼你的日历", async () => { const pid = el?.dataset?.pid || undefined; const r = await api("/calendar", { url: S.calUrl, ...(pid ? { projectId: pid } : {}) }); S.pcalOpen = null; S.calUrl = ""; S.calOpen = false; S.navCal = false; S.calWhere = null; S.calHelp = null; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
+  cal: (el) => withBusy("我看一眼你的日历", async () => { const pid = el?.dataset?.pid || undefined; const r = await api("/calendar", { url: S.calUrl, ...(pid ? (st().workCards[pid] ? { cardId: pid } : { projectId: pid }) : {}) }); S.pcalOpen = null; S.calUrl = ""; S.calOpen = false; S.navCal = false; S.calWhere = null; S.calHelp = null; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
   "cal-check": () => withBusy("我看看日历有没有变", async () => { const r = await api("/calendar/check", {}); if (r.result.changes.length) toast(`日历有 ${r.result.changes.length} 处变化`); else toast(`日历链接里还没有新变化。我刚读到的是：${(r.result.latest ?? []).join("；") || "近期没有日程"}。Google 日历的链接常要几十分钟才更新`); }),
   "more-news"() { S.moreNews = !S.moreNews; render(); },
   "more-next"() { S.moreNext = !S.moreNext; render(); },
