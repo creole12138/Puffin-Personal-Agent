@@ -1074,7 +1074,8 @@ const actions = {
   "scene-go"() {
     const c = SCENES[S.scene], v = S.sceneIn;
     const filled = c.inputs.filter((i) => (v[i.key] ?? "").trim());
-    if (!filled.length) return toast("输入框还是空的，可以直接点「用示例数据试试」", true);
+    const calOn = (S.scene === "today" || S.scene === "fitness") && Object.values(st().grants).some((g) => g.source === "calendar" && !g.revokedAt);
+    if (!filled.length && !calOn) return toast("还没有可以读的信息：连上日历、粘贴一点内容，或者直接点「用示例数据试试」", true);
     const sid = S.scene; S.scene = null;
     return withBusy("我在看你给的信息，把这件事理一理\n要一小会儿，可以先喝口水", async () => {
       const r = await api("/candidates", { text: c.title, brief: c.frame });
