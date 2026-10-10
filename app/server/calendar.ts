@@ -100,39 +100,46 @@ export class CalendarWatcher {
   private timer?: NodeJS.Timeout;
   constructor(private mgr: WorkspaceManager, private everySeconds: number) {}
 
-  private grantOf(ws: Workspace) {
-    return Object.values(ws.state.grants).find((g) => g.source === "calendar" && !g.revokedAt);
+  private grantsOf(ws: Workspace, projectId?: string | null) {
+    return Object.values(ws.state.grants).filter((g) => g.source === "calendar" && !g.revokedAt && (projectId === undefined || (g.filter?.projectId ?? null) === projectId));
   }
 
-  async connect(ws: Workspace, url: string) {
+  /** projectId 为空：Puffin 的连接（所有项目可用）；否则只给这个项目 */
+  async connect(ws: Workspace, url: string, projectId?: string) {
     const events = await fetchICS(url);
     const snapshot: Snapshot = Object.fromEntries(events.map((e) => [e.uid, e]));
-    const g = await ws.grant({ source: "calendar", scopeLabel: "读取并持续关注这个日历（只读）", filter: { url, snapshot, lastCheckedAt: new Date().toISOString() }, permissions: ["read", "watch"] });
+    const pname = projectId ? ws.state.projects[projectId]?.name : "";
+    const g = await ws.grant({ source: "calendar", scopeLabel: `读取并持续关注这个日历（只读${projectId ? `，仅「${pname}」` : ""}）`, filter: { url, snapshot, lastCheckedAt: new Date().toISOString(), ...(projectId ? { projectId } : {}) }, permissions: ["read", "watch"] });
     const upcoming = events.filter(inWindow).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 40);
     const text = upcoming.map((e) => `- ${e.start}${e.end ? ` ~ ${e.end.slice(11)}` : ""}｜${e.summary}${e.location ? `｜${e.location}` : ""}${e.status === "CANCELLED" ? "｜已取消" : ""}`).join("\n");
-    await ws.addMaterial({ title: `日历（接下来 ${WINDOW_DAYS} 天）`, text: text || "（近期没有日程）", source: "calendar", ref: "calendar" });
+    await ws.addMaterial({ title: `日历${pname ? `（${pname}）` : ""}（接下来 ${WINDOW_DAYS} 天）`, text: text || "（近期没有日程）", source: "calendar", ref: projectId ? `calendar:${projectId}` : "calendar" });
     return { grantId: g.id, events: upcoming.length };
   }
 
-  async checkNow(ws: Workspace) {
-    const g = this.grantOf(ws);
-    if (!g) throw new Error("还没有连接日历");
-    const events = await fetchICS(String(g.filter.url));
-    const changes = diff((g.filter.snapshot ?? {}) as Snapshot, events);
-    await ws.run((s) => {
-      const gg = s.grants[g.id]!;
-      gg.filter = { ...gg.filter, snapshot: Object.fromEntries(events.map((e) => [e.uid, e])), lastCheckedAt: new Date().toISOString() };
-      if (!changes.length) emit(s, { type: "evidence_observed", actor: "watcher", visibleInTimeline: false, summary: "日历没有变化", payload: {} });
-    });
-    if (changes.length) await ws.addMaterial({ title: "日历变化", text: changes.join("\n"), source: "calendar", ref: "calendar" });
-    return { changes };
+  async checkNow(ws: Workspace, projectId?: string | null) {
+    const gs = this.grantsOf(ws, projectId);
+    if (!gs.length) throw new Error("还没有连接日历");
+    const all: string[] = [];
+    for (const g of gs) {
+      const events = await fetchICS(String(g.filter.url));
+      const changes = diff((g.filter.snapshot ?? {}) as Snapshot, events);
+      await ws.run((s) => {
+        const gg = s.grants[g.id]!;
+        gg.filter = { ...gg.filter, snapshot: Object.fromEntries(events.map((e) => [e.uid, e])), lastCheckedAt: new Date().toISOString() };
+        if (!changes.length) emit(s, { type: "evidence_observed", actor: "watcher", visibleInTimeline: false, summary: "日历没有变化", payload: {} });
+      });
+      const pid = g.filter?.projectId as string | undefined;
+      if (changes.length) await ws.addMaterial({ title: `日历变化${pid ? `（${ws.state.projects[pid]?.name ?? ""}）` : ""}`, text: changes.join("\n"), source: "calendar", ref: pid ? `calendar:${pid}` : "calendar" });
+      all.push(...changes);
+    }
+    return { changes: all };
   }
 
   start() {
     const tick = async () => {
       for (const id of await this.mgr.list()) {
         const ws = await this.mgr.get(id).catch(() => null);
-        if (ws && this.grantOf(ws)) await this.checkNow(ws).catch((e) => console.warn(`日历检查失败 ${id}：${(e as Error).message}`));
+        if (ws && this.grantsOf(ws).length) await this.checkNow(ws).catch((e) => console.warn(`日历检查失败 ${id}：${(e as Error).message}`));
       }
     };
     this.timer = setInterval(tick, this.everySeconds * 1000);

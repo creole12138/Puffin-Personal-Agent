@@ -599,3 +599,12 @@ button.who:hover .home-ic{color:var(--mint)}
 .chip-btn .cn-ic,.chip.cal-on .cn-ic{width:22px;height:22px;border-radius:6px}
 .chip.cal-on{display:inline-flex;align-items:center;gap:6px;color:var(--green)}
 .composer .calc{padding:4px 0}
+
+.pcs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pc{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;font-size:13px}
+.pc.off{color:var(--ink3)}.pc.off .cn-ic{filter:grayscale(.35);opacity:.75}
+.pc.on .cn-s{color:var(--mint)}
+.pc-inh{font-size:11.5px;color:var(--green);background:var(--green-bg);border-radius:999px;padding:2px 8px;white-space:nowrap}
+@media (max-width:900px){.pcs{grid-template-columns:1fr 1fr}}
+.pc-ok{color:var(--green);font-weight:700;font-size:15px;padding:0 4px}
+.pcs{grid-template-columns:repeat(2,minmax(0,1fr))}
