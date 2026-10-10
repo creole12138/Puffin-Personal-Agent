@@ -141,8 +141,8 @@ export class Workspace {
     });
   }
 
-  resolve(decisionId: ID, kind: "adopt_suggestion" | "keep", note = "") {
-    return this.run((s) => resolveDecision(s, decisionId, kind === "keep" ? { kind, note: note || "仍按原计划" } : { kind }));
+  resolve(decisionId: ID, kind: "adopt_suggestion" | "keep" | "custom", note = "") {
+    return this.run((s) => resolveDecision(s, decisionId, kind === "keep" ? { kind, note: note || "仍按原计划" } : kind === "custom" ? { kind, statement: note } : { kind }));
   }
 
   editPremise(premiseId: ID, value: string) {

@@ -617,7 +617,8 @@ function rippleView(c, pc) {
         <div class="row" style="gap:10px"><span class="tag ${d.status === "invalidated" ? "bad" : "warn"}">${d.status === "invalidated" ? "不再成立" : "可能要调整"}</span><span class="strike">${esc(d.statement)}</span></div>
         ${a?.reason ? `<div class="s13 muted">${esc(a.reason)}</div>` : ""}
         ${d.suggestion ? `<div style="font-size:14px">建议${esc(d.suggestion.statement)}，代价是${esc(d.suggestion.tradeoff)}</div>` : ""}
-        <div class="row" style="gap:8px">${d.suggestion ? `<button class="btn mint" data-act="resolve" data-id="${d.id}" data-kind="adopt_suggestion">采用建议</button>` : ""}<button class="btn" data-act="resolve" data-id="${d.id}" data-kind="keep">仍按原决定</button></div></div>`; }).join("")}
+        <div class="row" style="gap:8px">${d.suggestion ? `<button class="btn mint" data-act="resolve" data-id="${d.id}" data-kind="adopt_suggestion">采用建议</button>` : ""}<button class="btn" data-act="resolve" data-id="${d.id}" data-kind="keep">仍按原决定</button><button class="btn ghost" data-act="own-open" data-id="${d.id}">我想换个做法</button></div>
+        ${S.ownFor === d.id ? `<div class="own"><input type="text" placeholder="直接写你的决定，比如：先做方案 B 的核心部分，A 下季度再补" data-bind="ownText" data-keep="own" value="${esc(S.ownText)}"><button class="btn mint" data-act="resolve-own" data-id="${d.id}">按我的来</button></div><div class="s12 faint">相关的计划和草稿会按你的决定重新检查</div>` : ""}</div>`; }).join("")}
     <div class="grid2" style="gap:12px">
       ${on.filter((i) => i.handling === "paused").map((i) => box("paused", "已暂停，等上面决定", i)).join("")}
       ${on.filter((i) => i.handling === "auto_updated").map((i) => box("auto", "已自动更新", i)).join("")}
@@ -1017,6 +1018,8 @@ const actions = {
   edit(el) { S.editing = el.dataset.id; S.editVal = st().premises[el.dataset.id].value; render(); },
   "edit-cancel"() { S.editing = null; render(); },
   "edit-save": (el) => withBusy("我看看这个变化会牵动哪些事", async () => { const r = await api(`/premises/${el.dataset.id}`, { value: S.editVal }); S.editing = null; if (r.result) reportChanges([r.result]); }),
+  "own-open"(el) { S.ownFor = S.ownFor === el.dataset.id ? null : el.dataset.id; S.ownText = ""; render(); if (S.ownFor) $app.querySelector('[data-keep="own"]')?.focus(); },
+  "resolve-own": (el) => { if (!S.ownText.trim()) return toast("写一下你想怎么做", true); return withBusy("好，按你说的来", async () => { await api(`/decisions/${el.dataset.id}/resolve`, { kind: "custom", statement: S.ownText.trim() }); S.ownFor = null; S.ownText = ""; S.showCard = true; }); },
   resolve: (el) => withBusy("好，按你的决定来", async () => { await api(`/decisions/${el.dataset.id}/resolve`, { kind: el.dataset.kind }); S.showCard = true; }),
   "show-card"() { S.showCard = true; render(); },
   "show-ripple"() { S.showCard = false; render(); },
@@ -1073,6 +1076,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && (S.preview || S.mats || S.navCal || S.scene || S.vfModal)) { S.preview = null; S.mats = false; S.navCal = false; S.scene = null; S.vfModal = false; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
+  if (e.key === "Enter" && !e.isComposing && b === "ownText") { e.preventDefault(); $app.querySelector('[data-act="resolve-own"]')?.click(); }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
   if (e.key === "Enter" && !e.isComposing && b === "editVal") { e.preventDefault(); $app.querySelector('[data-act="edit-save"]')?.click(); }
 });

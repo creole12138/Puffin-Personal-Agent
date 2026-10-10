@@ -528,3 +528,6 @@ button.who:hover .home-ic{color:var(--mint)}
 .hint-pop .x-btn{position:absolute;right:4px;top:4px;width:24px;height:24px;color:#fff;opacity:.7}
 .hint-pop .x-btn:hover{background:rgba(255,255,255,.15);opacity:1;color:#fff}
 @keyframes hintin{from{opacity:0;margin-left:-6px}to{opacity:1;margin-left:0}}
+
+.own{display:flex;gap:8px;margin-top:10px}
+.own input{flex:1;height:38px;border:1px solid var(--mint);border-radius:10px;padding:0 12px;font:inherit;font-size:14px}

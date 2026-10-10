@@ -50,7 +50,7 @@ const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/cards$/, (ws, b) => ws.draftCard(String(b.goal || ""), Array.isArray(b.evidenceIds) ? b.evidenceIds : [], b.projectId)],
   ["POST", /^\/cards\/([\w-]+)\/answer$/, (ws, b, m) => ws.answerQuestion(m[1]!, String(b.questionId), String(b.answer))],
   ["POST", /^\/cards\/([\w-]+)\/confirm$/, (ws, _b, m) => ws.confirmCard(m[1]!)],
-  ["POST", /^\/decisions\/([\w-]+)\/resolve$/, (ws, b, m) => ws.resolve(m[1]!, b.kind === "keep" ? "keep" : "adopt_suggestion", b.note)],
+  ["POST", /^\/decisions\/([\w-]+)\/resolve$/, (ws, b, m) => ws.resolve(m[1]!, b.kind === "keep" ? "keep" : b.kind === "custom" ? "custom" : "adopt_suggestion", String(b.note ?? b.statement ?? ""))],
   ["POST", /^\/premises\/([\w-]+)$/, (ws, b, m) => ws.editPremise(m[1]!, String(b.value))],
   ["POST", /^\/grants$/, (ws, b) => ws.grant(b)],
   ["POST", /^\/candidates$/, (ws, b) => ws.candidate(String(b.text || ""), String(b.brief || ""))],

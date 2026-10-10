@@ -177,7 +177,7 @@ export async function applyPremiseChange(state: AgentState, input: ApplyChangeIn
   return change;
 }
 
-export type Resolution = { kind: "adopt_suggestion" } | { kind: "keep"; note: string };
+export type Resolution = { kind: "adopt_suggestion" } | { kind: "keep"; note: string } | { kind: "custom"; statement: string };
 
 /** 用户对"需要你决定"的决策做出选择；下游暂停项随之恢复或取消 */
 export function resolveDecision(state: AgentState, decisionId: ID, r: Resolution): Decision {
@@ -186,10 +186,11 @@ export function resolveDecision(state: AgentState, decisionId: ID, r: Resolution
   const at = now();
   let current: Decision;
 
-  if (r.kind === "adopt_suggestion") {
-    if (!old.suggestion) throw new Error("该决策没有替代建议");
+  if (r.kind === "adopt_suggestion" || r.kind === "custom") {
+    if (r.kind === "adopt_suggestion" && !old.suggestion) throw new Error("该决策没有替代建议");
+    if (r.kind === "custom" && !r.statement.trim()) throw new Error("写一下你想怎么做");
     current = {
-      id: newId("dec"), workCardId: old.workCardId, statement: old.suggestion.statement,
+      id: newId("dec"), workCardId: old.workCardId, statement: r.kind === "custom" ? r.statement.trim() : old.suggestion!.statement,
       premiseIds: [...old.premiseIds], dependentDecisionIds: [...old.dependentDecisionIds], derivedActionIds: [],
       status: "valid", reversalCost: old.reversalCost, confidence: "medium",
       provenance: { confirmedBy: "user", evidenceIds: [...old.provenance.evidenceIds], at },
@@ -219,8 +220,8 @@ export function resolveDecision(state: AgentState, decisionId: ID, r: Resolution
 
   emit(state, {
     type: "decision_made", actor: "user", workCardId: old.workCardId,
-    summary: r.kind === "adopt_suggestion" ? `你决定改为「${current.statement}」` : `你决定仍然「${old.statement}」：${r.note}`,
-    payload: { decisionId: current.id, supersedes: r.kind === "adopt_suggestion" ? old.id : undefined },
+    summary: r.kind === "keep" ? `你决定仍然「${old.statement}」：${r.note}` : `你决定改为「${current.statement}」`,
+    payload: { decisionId: current.id, supersedes: r.kind === "keep" ? undefined : old.id },
   });
   for (const pc of Object.values(state.premiseChanges)) {
     if (!pc.resolvedAt && pc.impacts.some((i) => i.id === old.id)) {
