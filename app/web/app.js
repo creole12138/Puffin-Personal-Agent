@@ -198,6 +198,26 @@ function nav() {
   </div>`;
 }
 
+// ---------- 连日历（多处复用） ----------
+const CAL_HELP = {
+  icloud: ["iPhone / Mac 日历", ["在 Mac「日历」App 里新建一个 iCloud 日历（「我的 Mac 上」的本地日历不行）", "右键这个日历 →「共享日历…」→ 勾选「公开日历」", "复制出现的 webcal:// 链接，粘贴到这里即可"], "更新快，改完几分钟内就能发现"],
+  google: ["Google 日历", ["网页版 Google 日历 → 日历旁「⋮」→「设置和共享」", "拉到「集成日历」，复制「iCal 格式的私密地址」（带 private-）", "公司/学校账号可能被管理员禁止，建议用个人账号"], "Google 的订阅链接更新较慢，可能要几十分钟"],
+  outlook: ["Outlook", ["outlook.com → 设置 → 日历 →「共享日历」", "在「发布日历」里选日历和「可查看所有详细信息」，点「发布」", "复制 ICS 链接，粘贴到这里"], ""],
+  other: ["其他", ["任何能导出 .ics 订阅链接（以 https:// 或 webcal:// 开头）的日历都可以", "只读：我只看日程，不会修改你的日历"], ""],
+};
+function calConnect(where) {
+  const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt);
+  if (cal) return `<div class="calc ok">${cIcon("cal")}<span>日历已连接，日程有变化我会提醒你</span></div>`;
+  const tab = S.calTab ?? "icloud", h = CAL_HELP[tab];
+  return `<div class="calc">
+    <div class="calc-row"><input type="url" placeholder="粘贴日历链接（.ics / webcal）" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="cal-${where}"><button class="btn sm mint" data-act="cal">连接</button>
+      <button class="link calc-q" data-act="cal-help" data-where="${where}" aria-expanded="${S.calHelp === where}">怎么获取链接？</button></div>
+    ${S.calHelp === where ? `<div class="calc-tip" role="note"><div class="calc-tabs">${Object.entries(CAL_HELP).map(([k, v]) => `<button class="${k === tab ? "on" : ""}" data-act="cal-tab" data-v="${k}">${v[0]}</button>`).join("")}</div>
+      <ol>${h[1].map((x) => `<li>${esc(x)}</li>`).join("")}</ol>${h[2] ? `<div class="s12 faint">${esc(h[2])}</div>` : ""}
+      <div class="s12 faint">建议新建一个专门的日历来试，链接只用来读取日程。</div></div>` : ""}
+  </div>`;
+}
+
 // ---------- 连接 ----------
 const CI = {
   folder: ["#E3F3EE", "#178A73", `<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.6l2 2.2h8.4A1.5 1.5 0 0 1 21 9.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/>`],
@@ -220,7 +240,7 @@ function connectors(grants, cal) {
   const calRow = cal
     ? row("cal", "日历", `已连接${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)}检查过` : ""}`, `<span class="row" style="gap:6px"><button class="link" data-act="cal-check">检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></span>`, "on")
     : row("cal", "日历", "", `<button class="cn-btn" data-act="nav-cal">${S.navCal ? "取消" : "连接"}</button>`)
-      + (S.navCal ? `<div class="cn-cal"><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="navcal"><button class="btn sm mint" data-act="cal">连接</button></div>` : "");
+      + (S.navCal ? `<div class="cn-cal">${calConnect("nav")}</div>` : "");
   const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
     .map(([k, n]) => row(k, n, "", `<button class="cn-soon" data-act="soon" data-v="${n}">即将支持</button>`, "off")).join("");
   const ex = exGrant ? row("folder", "示例文件夹「对齐材料」（模拟）", "Q4 规划示例自带，无需创建", "", "on") : "";
@@ -280,7 +300,7 @@ const SCENES = {
     inputs: [
       { key: "goal", ref: "goal", label: "你的目标", ph: "比如：3 个月减 5 公斤，每周至少运动 3 次" },
       { key: "health", ref: "health", label: "健康数据", ph: "连接 Apple Health 即将支持，现在可以先把最近几天的睡眠、步数、运动摘要粘贴进来试试~" },
-      { key: "day", ref: "schedule", label: "今天的安排", ph: "自动读取日历即将支持，现在可以先写一下今天的会议和空闲时间试试~" },
+      { key: "day", ref: "schedule", label: "今天的安排", ph: "上面连了日历就不用填；没连的话，写一下今天的会议和空闲时间" },
     ],
     sample: {
       goal: "3 个月减 5 公斤，每周至少运动 3 次，原计划今晚 19:00 力量训练 45 分钟。",
@@ -356,7 +376,8 @@ function sceneModal() {
       ${S.scene === "release" ? `<div class="sfold">${cIcon("folder")}<div style="flex:1"><b>接管项目文件夹（推荐）</b><div class="s13" style="color:var(--ink2);margin-top:2px">选一个项目目录，我先读一遍理出进展；之后里面的文件有变动，我会自动判断牵动了什么并提醒你（网页开着时检查）</div></div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">${"showDirectoryPicker" in window ? `<button class="btn mint" data-act="scene-folder">选择文件夹</button>` : `<span class="s12 faint">需要 Chrome 或 Edge</span>`}<button class="btn" data-act="scene-vfolder">用示例项目文件夹试试</button></div></div>
         <div class="sor">或者先粘贴</div>` : ""}
-      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.ph.includes("即将支持") ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
+      ${S.scene === "today" || S.scene === "fitness" ? `<div class="sin"><span>日历</span>${calConnect("scene")}</div>` : ""}
+      ${c.inputs.map((i) => `<label class="sin"><span>${i.label}</span><textarea rows="${i.key === "goal" || i.key === "plan" ? 3 : i.key === "day" ? 4 : 6}" placeholder="${i.key !== "goal" && i.key !== "plan" ? `${esc(i.ph)}&#10;&#10;` : ""}例如：&#10;${esc(c.sample[i.key] ?? "").replace(/\n/g, "&#10;")}" data-scene="${i.key}" data-keep="scene-${i.key}">${esc(v[i.key] ?? "")}</textarea></label>`).join("")}
     </div>
     <div class="scene-f"><button class="btn" data-act="scene-sample">用示例数据试试</button><span style="flex:1"></span><button class="btn mint lg" data-act="scene-go">${c.cta}</button></div>
   </div></div>`;
@@ -370,8 +391,7 @@ function startCards() {
     : "showDirectoryPicker" in window ? card("folder", "接管项目文件夹", "丝滑推进项目执行")
     : `<div class="prompt done"><b>接管项目文件夹</b><small>需要用 Chrome 或 Edge 打开</small></div>`;
   const c3 = cal ? `<div class="prompt done"><b>连上日历</b><small>已连接，变化帮你盯着</small></div>`
-    : S.calOpen ? `<div class="prompt open"><b>连上日历</b><input type="url" placeholder="粘贴 .ics 日历链接" aria-label="日历链接" value="${esc(S.calUrl)}" data-bind="calUrl" data-keep="cal">
-        <div class="row" style="gap:8px"><button class="btn sm mint" data-act="cal">连接</button><button class="choice sm" data-act="cal-open">取消</button></div></div>`
+    : S.calOpen ? `<div class="prompt open"><b>连上日历</b>${calConnect("home")}<button class="choice sm" data-act="cal-open" style="align-self:flex-start">取消</button></div>`
     : card("cal-open", "连上日历", "做你的时间管理大师");
   return c2 + c3;
 }
@@ -424,8 +444,9 @@ function home() {
     ${sceneCards()}
     <div class="composer" data-drop="attach">
       <textarea rows="3" aria-label="说一件事" placeholder="说一件放不下的事，比如：和 Alex 还有一些工作一直没对齐&#10;也可以把相关文件拖进来" data-bind="ask" data-keep="ask">${esc(S.ask)}</textarea>
+      ${S.calWhere === "composer" ? calConnect("composer") : ""}
       <div class="composer-f">
-        <div class="chips">${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
+        <div class="chips">${Object.values(st()?.grants ?? {}).some((g) => g.source === "calendar" && !g.revokedAt) ? `<span class="chip cal-on">${cIcon("cal")}日历已连接</span>` : `<button class="chip-btn" data-act="cal-where" data-v="composer">${cIcon("cal")}${S.calWhere === "composer" ? "收起" : "连接日历"}</button>`}${S.attach.map((a, i) => `<span class="chip">${esc(a.title)}<button aria-label="移除" data-act="unattach" data-i="${i}">×</button></span>`).join("")}</div>
         <button class="btn mint lg" data-act="tell">Tell me</button>
       </div>
     </div>
@@ -1059,11 +1080,16 @@ const actions = {
       const r = await api("/candidates", { text: c.title, brief: c.frame });
       const cid = r.result.id, ids = [];
       for (const i of filled) { const m = await api("/materials", { title: `${i.label}（${c.title}）`, text: v[i.key], ref: i.ref }); ids.push(m.result.evidence.id); }
+      const calEv = Object.values(st().evidence).filter((e) => e.ref === "calendar").sort((a, b) => String(a.observedAt).localeCompare(String(b.observedAt))).at(-1);
+      if (calEv && (sid === "today" || sid === "fitness")) ids.push(calEv.id);
       const d = await api(`/cards/${cid}/draft`, { evidenceIds: ids });
       openCard(d.result.id); S.sceneIn = {};
     });
   },
-  "nav-cal"() { S.navCal = !S.navCal; render(); if (S.navCal) $app.querySelector('[data-keep="navcal"]')?.focus(); },
+  "cal-help"(el) { S.calHelp = S.calHelp === el.dataset.where ? null : el.dataset.where; render(); },
+  "cal-tab"(el) { S.calTab = el.dataset.v; render(); },
+  "cal-where"(el) { S.calWhere = S.calWhere === el.dataset.v ? null : el.dataset.v; render(); if (S.calWhere) $app.querySelector(`[data-keep="cal-${S.calWhere}"]`)?.focus(); },
+  "nav-cal"() { S.navCal = !S.navCal; render(); if (S.navCal) $app.querySelector('[data-keep="cal-nav"]')?.focus(); },
   soon(el) { toast(`${el.dataset.v} 还在示意阶段，下一版接入`); },
   "open-mats"() { S.more = false; S.mats = true; render(); },
   "close-mats"() { S.mats = false; render(); },
@@ -1122,7 +1148,7 @@ const actions = {
   revoke: (el) => withBusy("好，我不再看那里了", async () => { const g = st().grants[el.dataset.id]; await api(`/grants/${el.dataset.id}/revoke`, {}); if (g?.source === "local_folder" && S.folder?.grantId === g.id) { S.folder = null; clearTimeout(folderTimer); } }),
   folder: () => pickFolder().catch((e) => toast(e.message, true)),
   "folder-stop"() { const id = S.folder?.grantId; S.folder = null; clearTimeout(folderTimer); if (id) actions.revoke({ dataset: { id } }); },
-  cal: () => withBusy("我看一眼你的日历", async () => { const r = await api("/calendar", { url: S.calUrl }); S.calUrl = ""; S.calOpen = false; S.navCal = false; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
+  cal: () => withBusy("我看一眼你的日历", async () => { const r = await api("/calendar", { url: S.calUrl }); S.calUrl = ""; S.calOpen = false; S.navCal = false; S.calWhere = null; S.calHelp = null; toast(`已连接，读到近期 ${r.result.events} 个日程`); }),
   "cal-check": () => withBusy("我看看日历有没有变", async () => { const r = await api("/calendar/check", {}); if (r.result.changes.length) toast(`日历有 ${r.result.changes.length} 处变化`); else toast("日历没有变化"); }),
   "more-news"() { S.moreNews = !S.moreNews; render(); },
   "more-next"() { S.moreNext = !S.moreNext; render(); },
