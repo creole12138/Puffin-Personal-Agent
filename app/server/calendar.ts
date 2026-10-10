@@ -91,7 +91,15 @@ async function fetchICS(url: string): Promise<CalEvent[]> {
   const text = await res.text();
   if (text.length > 5_000_000) throw new Error("日历太大");
   if (!text.includes("BEGIN:VCALENDAR")) throw new Error("这个链接返回的不是日历（.ics）");
+  lastName = (text.match(/^X-WR-CALNAME[^:]*:(.+)$/m)?.[1] ?? "").replace(/\\,/g, ",").trim();
   return parseICS(text);
+}
+let lastName = "";
+/** 日历的显示名：优先用日历自己的名字，否则按服务商 */
+function calName(url: string, name: string) {
+  const host = (() => { try { return new URL(url.replace(/^webcal:/i, "https:")).hostname; } catch { return ""; } })();
+  const provider = /google/.test(host) ? "Google 日历" : /icloud/.test(host) ? "iCloud 日历" : /outlook|office|live/.test(host) ? "Outlook 日历" : "日历";
+  return name ? `${provider}「${name}」` : provider;
 }
 
 type Snapshot = Record<string, CalEvent>;
@@ -107,9 +115,10 @@ export class CalendarWatcher {
   /** projectId 为空：Puffin 的连接（所有项目可用）；否则只给这个项目 */
   async connect(ws: Workspace, url: string, projectId?: string) {
     const events = await fetchICS(url);
+    const label = calName(url, lastName);
     const snapshot: Snapshot = Object.fromEntries(events.map((e) => [e.uid, e]));
     const pname = projectId ? ws.state.projects[projectId]?.name : "";
-    const g = await ws.grant({ source: "calendar", scopeLabel: `读取并持续关注这个日历（只读${projectId ? `，仅「${pname}」` : ""}）`, filter: { url, snapshot, lastCheckedAt: new Date().toISOString(), ...(projectId ? { projectId } : {}) }, permissions: ["read", "watch"] });
+    const g = await ws.grant({ source: "calendar", scopeLabel: `读取并持续关注${label}（只读${projectId ? `，仅「${pname}」` : ""}）`, filter: { url, label, snapshot, lastCheckedAt: new Date().toISOString(), ...(projectId ? { projectId } : {}) }, permissions: ["read", "watch"] });
     const upcoming = events.filter(inWindow).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 40);
     const text = upcoming.map((e) => `- ${e.start}${e.end ? ` ~ ${e.end.slice(11)}` : ""}｜${e.summary}${e.location ? `｜${e.location}` : ""}${e.status === "CANCELLED" ? "｜已取消" : ""}`).join("\n");
     await ws.addMaterial({ title: `日历${pname ? `（${pname}）` : ""}（接下来 ${WINDOW_DAYS} 天）`, text: text || "（近期没有日程）", source: "calendar", ref: projectId ? `calendar:${projectId}` : "calendar" });

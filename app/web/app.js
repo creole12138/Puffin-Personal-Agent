@@ -207,6 +207,8 @@ function connectedEvidenceIds(pid) {
   return [...new Set(ids)];
 }
 
+const calLabel = (g) => { if (g?.filter?.label) return g.filter.label; const u = String(g?.filter?.url ?? ""); return /google/.test(u) ? "Google 日历" : /icloud/.test(u) ? "iCloud 日历" : /outlook|office|live/.test(u) ? "Outlook 日历" : "日历"; };
+
 // ---------- 连日历（多处复用） ----------
 const CAL_HELP = {
   icloud: ["iPhone / Mac 日历", ["在 Mac「日历」App 里新建一个 iCloud 日历（「我的 Mac 上」的本地日历不行）", "右键这个日历 →「共享日历…」→ 勾选「公开日历」", "复制出现的 webcal:// 链接，粘贴到这里即可"], "更新快，改完几分钟内就能发现"],
@@ -247,7 +249,7 @@ function connectors(grants, cal) {
     : "showDirectoryPicker" in window ? row("folder", "本机项目文件夹", "", `<button class="cn-btn" data-act="folder">连接</button>`)
     : row("folder", "本机项目文件夹", "需要 Chrome 或 Edge", "");
   const calRow = cal
-    ? row("cal", "日历", `已连接${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)}检查过` : ""}`, `<span class="row" style="gap:6px"><button class="link" data-act="cal-check">检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></span>`, "on")
+    ? row("cal", esc(calLabel(cal)), `已连接${cal.filter.lastCheckedAt ? ` · ${timeAgo(cal.filter.lastCheckedAt)}检查过` : ""}`, `<span class="row" style="gap:6px"><button class="link" data-act="cal-check">检查</button><button class="link" data-act="revoke" data-id="${cal.id}">断开</button></span>`, "on")
     : row("cal", "日历", "", `<button class="cn-btn" data-act="nav-cal">${S.navCal ? "取消" : "连接"}</button>`)
       + (S.navCal ? `<div class="cn-cal">${calConnect("nav")}</div>` : "");
   const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
@@ -783,8 +785,8 @@ function projConnections(p) {
     : pf ? item("folder", `本机文件夹「${esc(pf.name)}」`, "网页开着时检查", `<button class="link" data-act="pfolder-stop" data-id="${p.id}">停止</button>`, "on")
     : ex ? item("folder", "示例文件夹「对齐材料」", "", ok, "on")
     : "showDirectoryPicker" in window ? item("folder", "本机文件夹", "", `<button class="cn-btn" data-act="pfolder" data-id="${p.id}">连接</button>`) : "";
-  const cal = wsCal ? item("cal", "日历", "", ok, "on")
-    : pCal ? item("cal", "日历", pCal.filter.lastCheckedAt ? `${timeAgo(pCal.filter.lastCheckedAt)}检查过` : "", `<span class="row" style="gap:8px"><button class="link" data-act="pcal-check" data-id="${p.id}">检查</button><button class="link" data-act="revoke" data-id="${pCal.id}">断开</button></span>`, "on")
+  const cal = wsCal ? item("cal", esc(calLabel(wsCal)), "", ok, "on")
+    : pCal ? item("cal", esc(calLabel(pCal)), pCal.filter.lastCheckedAt ? `${timeAgo(pCal.filter.lastCheckedAt)}检查过` : "", `<span class="row" style="gap:8px"><button class="link" data-act="pcal-check" data-id="${p.id}">检查</button><button class="link" data-act="revoke" data-id="${pCal.id}">断开</button></span>`, "on")
     : item("cal", "日历", "", `<button class="cn-btn" data-act="pcal-open" data-id="${p.id}">${S.pcalOpen === p.id ? "取消" : "连接"}</button>`);
   return `<div class="sec-h">这个项目的连接</div><div class="pcs">${folder}${cal}</div>${S.pcalOpen === p.id && !wsCal && !pCal ? calConnect("proj", p.id) : ""}`;
 }
