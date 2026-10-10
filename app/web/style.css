@@ -508,3 +508,6 @@ button.prompt:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,43,
 .vf-out{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:13.5px;line-height:1.6}
 .vf-res.warn .vf-out{background:var(--amber-bg);color:var(--amber)}
 .vf-out span{flex:1}
+
+.al-more{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:6px 0 0;font:inherit;font-size:13px;color:var(--mint);cursor:pointer}
+.al-more:hover{color:var(--mint-d)}

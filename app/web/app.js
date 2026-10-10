@@ -344,9 +344,17 @@ function revisit() {
   const s = st(), since = S.lastSeen ?? "0", DAY = 864e5, nowT = Date.now();
   const title = (id) => { const c = s.workCards[id]; return c ? `${c.projectId ? `${esc(s.projects[c.projectId]?.name)} · ` : ""}${esc(c.title)}` : ""; };
   const items = [];
-  openChanges().forEach((pc) => { const p = s.premises[pc.premiseId], i = pc.impacts.find((x) => x.handling === "needs_user"), d = s.decisions[i.id];
-    items.push({ k: "decide", id: i.workCardId, t: `${p?.label}变成 ${pc.to}，「${d?.statement}」${d?.status === "invalidated" ? "不再成立" : "需要再看看"}` }); });
-  Object.values(s.proposals ?? {}).filter((p) => p.status === "pending" && p.workCardId && !items.some((x) => x.id === p.workCardId))
+  // 同一份新材料引起的变化合成一条，列出牵动的卡
+  const groups = new Map();
+  openChanges().forEach((pc) => { const key = pc.evidenceId || pc.id; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(pc); });
+  for (const pcs of groups.values()) {
+    const pc = pcs[0], p = s.premises[pc.premiseId];
+    const cards = [...new Set(pcs.flatMap((x) => x.impacts.filter((i) => i.handling === "needs_user").map((i) => i.workCardId)))];
+    const i = pc.impacts.find((x) => x.handling === "needs_user"), d = s.decisions[i.id];
+    const t = cards.length > 1 ? `${p?.label}变成 ${pc.to}，牵动 ${cards.length} 件事的决定，需要再看看` : `${p?.label}变成 ${pc.to}，「${d?.statement}」${d?.status === "invalidated" ? "不再成立" : "需要再看看"}`;
+    items.push({ k: "decide", id: cards[0] ?? i.workCardId, cards, t });
+  }
+  Object.values(s.proposals ?? {}).filter((p) => p.status === "pending" && p.workCardId && !items.some((x) => x.id === p.workCardId || x.cards?.includes(p.workCardId)))
     .forEach((p) => items.push({ k: "decide", id: p.workCardId, t: `${p.change?.label ?? "一个条件"}可能变了，等你确认` }));
   s.events.filter((e) => e.visibleInTimeline && e.actor !== "user" && e.at > since && e.type !== "card_created" && e.workCardId).slice(-4).reverse()
     .forEach((e) => items.push({ k: "news", id: e.workCardId, t: e.summary }));
@@ -362,13 +370,13 @@ function revisit() {
   const K = { decide: ["要你决定", "warn"], news: ["新进展", "ok"], stuck: ["可能卡住了", "stuck"], next: ["快到了", "info"] };
   const order = ["decide", "stuck", "next", "news"], list = items.sort((x, y) => order.indexOf(x.k) - order.indexOf(y.k));
   const hour = new Date().getHours(), hi = hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
-  const shown = S.moreNews ? list : list.slice(0, 5);
+  const shown = S.moreNews ? list : list.slice(0, 3);
   return `<section class="alerts">
     <div class="alerts-h"><b>${hi}，这是我替你盯着的</b><span class="faint s12">${list.length ? `${list.length} 条提醒` : ""}</span></div>
     ${shown.map((x) => `<button class="al" data-act="open" data-id="${x.id}"><span class="tag al-${K[x.k][1]}">${K[x.k][0]}</span>
-      <span class="al-t"><span class="al-c">${title(x.id)}</span><span>${esc(x.t)}</span></span><span class="al-go">查看 ›</span></button>`).join("")
+      <span class="al-t"><span class="al-c">${x.cards?.length > 1 ? x.cards.map(title).join("、") : title(x.id)}</span><span>${esc(x.t)}</span></span><span class="al-go">查看 ›</span></button>`).join("")
       || `<div class="s13 muted" style="padding:6px 2px">一切按计划进行，暂时没有要你操心的。</div>`}
-    ${list.length > 5 ? `<button class="link" style="align-self:flex-start" data-act="more-news">${S.moreNews ? "收起" : `还有 ${list.length - 5} 条`}</button>` : ""}
+    ${list.length > 3 ? `<button class="al-more" data-act="more-news">${S.moreNews ? "收起" : `展开其余 ${list.length - 3} 条`}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${S.moreNews ? 180 : 0}deg)"><path d="m6 9 6 6 6-6"/></svg></button>` : ""}
   </section>`;
 }
 
