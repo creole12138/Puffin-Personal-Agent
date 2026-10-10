@@ -217,10 +217,10 @@ const calLabel = (g) => { if (g?.filter?.label) return g.filter.label; const u =
 
 // ---------- 连日历（多处复用） ----------
 const CAL_HELP = {
-  icloud: ["iPhone / Mac 日历", ["在 Mac「日历」App 里新建一个 iCloud 日历（「我的 Mac 上」的本地日历不行）", "右键这个日历 →「共享日历…」→ 勾选「公开日历」", "复制出现的 webcal:// 链接，粘贴到这里即可"], "更新快，改完几分钟内就能发现"],
-  google: ["Google 日历", ["网页版 Google 日历 → 日历旁「⋮」→「设置和共享」", "拉到「集成日历」，复制「iCal 格式的私密地址」（带 private-）", "公司/学校账号可能被管理员禁止，建议用个人账号"], "Google 的订阅链接更新较慢，可能要几十分钟"],
-  outlook: ["Outlook", ["outlook.com → 设置 → 日历 →「共享日历」", "在「发布日历」里选日历和「可查看所有详细信息」，点「发布」", "复制 ICS 链接，粘贴到这里"], ""],
-  other: ["其他", ["任何能导出 .ics 订阅链接（以 https:// 或 webcal:// 开头）的日历都可以", "只读：我只看日程，不会修改你的日历"], ""],
+  icloud: ["iPhone / Mac 日历", ["在 Mac「日历」App 里新建一个 iCloud 日历（「我的 Mac 上」的本地日历不行）", "右键这个日历 →「共享日历…」→ 勾选「公开日历」", "复制出现的 webcal:// 链接，粘贴到这里即可"], "更新延迟：最快，通常一两分钟内就能发现改动"],
+  google: ["Google 日历", ["网页版 Google 日历 → 日历旁「⋮」→「设置和共享」", "拉到「集成日历」，复制「iCal 格式的私密地址」（带 private-）", "公司/学校账号可能被管理员禁止，建议用个人账号"], "更新延迟：最慢，Google 刷新订阅链接一般要几分钟，偶尔几十分钟甚至更久"],
+  outlook: ["Outlook", ["outlook.com → 设置 → 日历 →「共享日历」", "在「发布日历」里选日历和「可查看所有详细信息」，点「发布」", "复制 ICS 链接，粘贴到这里"], "更新延迟：中等，一般几分钟到十几分钟"],
+  other: ["其他", ["任何能导出 .ics 订阅链接（以 https:// 或 webcal:// 开头）的日历都可以", "只读：我只看日程，不会修改你的日历"], "更新延迟：取决于日历服务商多久刷新一次订阅链接"],
 };
 function calConnect(where, pid) {
   const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId);
@@ -231,6 +231,7 @@ function calConnect(where, pid) {
       <button class="link calc-q" data-act="cal-help" data-where="${where}" aria-expanded="${S.calHelp === where}">怎么获取链接？</button></div>
     ${S.calHelp === where ? `<div class="calc-tip" role="note"><div class="calc-tabs">${Object.entries(CAL_HELP).map(([k, v]) => `<button class="${k === tab ? "on" : ""}" data-act="cal-tab" data-v="${k}">${v[0]}</button>`).join("")}</div>
       <ol>${h[1].map((x) => `<li>${esc(x)}</li>`).join("")}</ol>${h[2] ? `<div class="s12 faint">${esc(h[2])}</div>` : ""}
+      <div class="s12 faint">日历改动后要等服务商刷新订阅链接，我再每 2 分钟检查一次，所以提醒会晚一些出现；想马上看可以在连接里点「检查」。</div>
       <div class="s12 faint">建议新建一个专门的日历来试，链接只用来读取日程。</div></div>` : ""}
   </div>`;
 }
