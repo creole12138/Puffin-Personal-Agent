@@ -570,3 +570,7 @@ button.who:hover .home-ic{color:var(--mint)}
 .task .pulse::after{content:"";position:absolute;inset:0;border-radius:50%;background:#d29a3a;animation:pulse 1.6s ease-out infinite}
 @keyframes pulse{from{transform:scale(1);opacity:.7}to{transform:scale(2.6);opacity:0}}
 .task:has(.pulse){padding-right:22px}
+
+.sec-h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:-4px}
+.sec-h span{font-size:11px;font-weight:500;color:var(--ink4);background:var(--line3);border-radius:999px;padding:0 7px;line-height:18px}
+.sec-h small{font-size:12px;font-weight:400;color:var(--ink4)}

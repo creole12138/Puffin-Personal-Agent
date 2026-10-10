@@ -749,12 +749,12 @@ function projectView() {
   const refs = (pid) => cs.filter((c) => c.premiseIds.includes(pid) || c.actionIds.some((a) => s.actions[a]?.premiseIds?.includes(pid))).length;
   return `<div style="display:flex;flex-direction:column;gap:18px">
     <div><div class="lbl">项目</div><div style="font-size:28px;font-weight:700;margin-top:2px">${esc(p.name)}</div>${p.goal ? `<div style="font-size:14px;color:var(--ink2);margin-top:6px">目标：${esc(p.goal)}</div>` : ""}</div>
-    ${p.premiseIds.length ? `<div class="grid3">${p.premiseIds.map((id) => s.premises[id]).filter(Boolean).map((pr) => {
+    ${p.premiseIds.length ? `<div class="sec-h">共享前提条件<span>${p.premiseIds.filter((id) => s.premises[id]).length}</span><small>项目里各项工作共用，一变就会牵动相关的事</small></div><div class="grid3">${p.premiseIds.map((id) => s.premises[id]).filter(Boolean).map((pr) => {
       const was = pr.history.at(-1)?.value, n = refs(pr.id);
-      return `<div class="prem ${was && was !== pr.value ? "changed" : pr.confirmed ? "" : "unconf"}"><div class="lbl">共享前提条件 · ${esc(pr.label)}</div><div style="font-size:16px;margin-top:4px">${esc(pr.value)}${was && was !== pr.value ? `<span class="s12 muted">（原 ${esc(was)}）</span>` : ""}</div>
+      return `<div class="prem ${was && was !== pr.value ? "changed" : pr.confirmed ? "" : "unconf"}"><div class="lbl">${esc(pr.label)}</div><div style="font-size:16px;margin-top:4px">${esc(pr.value)}${was && was !== pr.value ? `<span class="s12 muted">（原 ${esc(was)}）</span>` : ""}</div>
         <div class="s11" style="margin-top:6px;color:${pr.confirmed ? "var(--ink3)" : "var(--red)"}">${pr.confirmed ? "" : "未确认 · "}被 ${n} 项工作引用</div></div>`; }).join("")}</div>` : ""}
     ${changed.length ? `<div class="amber">${changed.map((pc) => `${esc(s.premises[pc.premiseId]?.label)}变化影响了本项目 ${new Set(pc.impacts.filter((i) => i.handling !== "unaffected").map((i) => i.workCardId)).size} 项工作：${pc.impacts.filter((i) => i.handling === "needs_user").length} 项需要你决定，${pc.impacts.filter((i) => i.handling === "auto_updated").length} 项已自动调整`).join("；")}</div>` : ""}
-    <div class="row"><div class="lbl" style="flex-grow:1">工作</div><button class="btn outline-mint" data-act="new-in-proj">＋ 在这个项目里开始新对话</button></div>
+    <div class="row"><div class="sec-h" style="flex-grow:1;margin:0">工作<span>${cs.length}</span></div><button class="btn outline-mint" data-act="new-in-proj">＋ 在这个项目里开始新对话</button></div>
     <div class="grid2" style="gap:12px">${cs.map((c) => { const d = decisionMain(c);
       return `<button class="pcard" data-act="open" data-id="${c.id}"><div class="row" style="gap:8px">${c.stage === "candidate" ? "" : `<span class="tag ${STAGE[c.stage][1]}">${STAGE[c.stage][0]}</span>`}${needsYou(c) ? `<span class="s11" style="color:var(--red)">需要你决定</span>` : ""}</div>
         <div style="font-size:15px;font-weight:500">${esc(c.title)}</div><div class="s13" style="color:var(--ink2)">${esc(d?.statement ?? c.waitingOn ?? c.nextStep ?? "")}</div></button>`; }).join("")}</div>
