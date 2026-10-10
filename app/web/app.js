@@ -596,7 +596,7 @@ function activeView(c) {
   const all = c.premiseIds.map((id) => s.premises[id]).filter(Boolean);
   const others = all.filter((p) => !prem.includes(p));
   const attention = all.filter((p) => p.inferred || !p.confirmed);
-  const canDemo = c.id === "wc_alex" && s.premises.pr_budget?.value === "50 万";
+  const canDemo = c.id === "wc_alex" && s.premises.pr_budget?.value === "50 万" && !Object.values(s.evidence).some((e) => e.ref === "对齐材料/预算表-v3.csv");
   const ghEv0 = (c.originEvidenceIds ?? []).map((id) => s.evidence[id]).find((e) => (e?.ref === "github" || e?.ref === `${VF}/PR 状态.md`) && /#412/.test(e.excerpt));
   const ghEv = ghEv0 && latestOf(ghEv0.ref);
   const canSim = ghEv && !/#412[^\n]*Merged/.test(ghEv.excerpt);
@@ -626,7 +626,7 @@ function activeView(c) {
     ${vfPanel(c)}
     <div class="cta2">
       ${canSim ? `<button class="demo play" data-act="sim-pr"><img src="/play.svg" alt="" width="40" height="40"><span><b>模拟一次变化：Git 仓库中 #412 支付流程 PR 合并了</b><small>看看我会怎么发现变化、调整风险判断</small></span></button>`
-        : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>演示：小王发来新的预算表</b><small>Q4 预算 50 万 → 30 万，看看会牵动哪些事</small></span></button>`
+        : canDemo ? `<button class="demo play" data-act="demo-change"><img src="/play.svg" alt="" width="40" height="40"><span><b>${S.demoSent ? "已模拟：新预算表放进了文件夹" : "演示：小王发来新的预算表"}</b><small>${S.demoSent ? "我在后台看，看完会来找你，你可以先去别处" : "模拟他把 30 万的新预算表放进「对齐材料」文件夹，看我会不会主动来找你"}</small></span></button>`
         : `<div class="newmat" data-drop="material"><span>有新的材料？给我看看，我判断会不会改变什么<small class="faint" style="display:block;font-size:12px;margin-top:2px">支持 txt、md、rtf、csv、json、ics 文件</small></span><label class="btn mint" style="cursor:pointer">上传新材料<input type="file" multiple accept=".txt,.md,.csv,.json,.tsv,.ics,.rtf" data-change="material-files" hidden></label></div>`}
     </div>
   </div>`;
@@ -1080,11 +1080,18 @@ const actions = {
   resolve: (el) => withBusy("好，按你的决定来", async () => { await api(`/decisions/${el.dataset.id}/resolve`, { kind: el.dataset.kind }); S.showCard = true; }),
   "show-card"() { S.showCard = true; render(); },
   "show-ripple"() { S.showCard = false; render(); },
-  "demo-change": () => withBusy("小王发来了一份新的预算表，我看看", async () => {
-    const v2 = st().evidence.ev_budget_v2;
-    const r = await api("/materials", { title: "预算表 v3（小王）", text: "项目,金额（万）\nQ4 总预算,30\n留存专项,20\n拉新,5\n其他,5\n备注,小王：Q4 总预算下调，以此版为准", source: "local_folder", ref: "对齐材料/预算表-v3.csv", supersedes: v2?.id });
-    if (!reportChanges(r.result.changes, r.result.proposals)) toast("材料收下了，没有改变任何前提");
-  }),
+  "demo-change"() {
+    if (S.demoSent) return;
+    S.demoSent = true; render();
+    toast("已模拟：小王把新预算表放进了「对齐材料」文件夹。你可以继续做别的，我看完会来找你");
+    setTimeout(async () => {
+      try {
+        const v2 = st().evidence.ev_budget_v2;
+        await api("/materials", { title: "预算表 v3（小王）", text: "项目,金额（万）\nQ4 总预算,30\n留存专项,20\n拉新,5\n其他,5\n备注,小王：Q4 总预算下调，以此版为准", source: "local_folder", ref: "对齐材料/预算表-v3.csv", supersedes: v2?.id });
+        checkAlerts(); render();
+      } catch (e) { S.demoSent = false; toast(e.message, true); render(); }
+    }, 2000);
+  },
   timeline() { S.view = "timeline"; S.tlEvent = null; S.rollbackNote = false; render(); },
   tk(el) { S.tlEvent = S.tlEvent === el.dataset.id ? null : el.dataset.id; S.rollbackNote = false; render(); },
   "tl-pick"(el) { S.tlEvent = el.dataset.id; S.rollbackNote = false; render(); },
