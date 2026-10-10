@@ -119,7 +119,7 @@ function shell() {
   const main = { home, card: () => cardView(s.workCards[S.sel]), project: projectView, timeline: timelineView, demo: demoView }[S.view] ?? home;
   return `<div class="app">
     <div class="top">
-      <button class="who" data-act="home" title="回到主页">${AV(32, 28)}云朵小管家<span class="en">Puffin</span></button>
+      <button class="who" data-act="home" title="回到主页"><svg class="home-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>${AV(32, 28)}云朵小管家<span class="en">Puffin</span></button>
       <div class="sp"></div>
       <span class="meta">模型：${esc(S.ws.model)}</span>
       <div style="position:relative"><button class="btn ghost" data-act="more" aria-expanded="${S.more}">更多 ▾</button>
@@ -146,7 +146,6 @@ function nav() {
   const cal = grants.find((g) => g.source === "calendar");
   const mats = Object.values(s.evidence).filter((e) => !["chat", "edit"].includes(e.ref)).length;
   return `
-  <button class="homebtn ${S.view === "home" && !S.proj ? "on" : ""}" data-act="home"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>主页</button>
   ${projects.length ? `<div class="nav-title">项目</div>` : ""}
   ${projects.map((p) => {
     const cs = cardsOf(p.id), att = cs.filter(needsYou).length;

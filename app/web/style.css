@@ -517,3 +517,6 @@ button.who:hover{opacity:.8}
 .homebtn{display:flex;align-items:center;gap:8px;border:0;background:none;padding:8px 10px;margin:0 -4px 6px;border-radius:10px;font:inherit;font-size:14px;color:var(--ink2);cursor:pointer;text-align:left}
 .homebtn:hover{background:var(--line3);color:var(--ink)}
 .homebtn.on{background:var(--green-bg);color:var(--green);font-weight:500}
+
+.who .home-ic{color:var(--ink3);margin-right:2px}
+button.who:hover .home-ic{color:var(--mint)}
