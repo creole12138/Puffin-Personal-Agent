@@ -942,7 +942,7 @@ const actions = {
   preview(el) { S.preview = el.dataset.id; render(); },
   "close-preview"() { S.preview = null; render(); },
   "download-out"(el) { const a = st().actions[el.dataset.id]; const url = URL.createObjectURL(new Blob([`# ${a.output.title}\n\n${a.output.body}\n`], { type: "text/markdown;charset=utf-8" }));
-    const l = document.createElement("a"); l.href = url; l.download = fileName(a); l.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); },
+    const l = document.createElement("a"); l.href = url; l.download = fileName(a); document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); },
   async "copy-out"(el) { const o = st().actions[el.dataset.id].output; try { await navigator.clipboard.writeText(o.body); toast("已复制"); } catch { toast("复制失败，请手动选中复制", true); } },
   doc(el) { const id = el.dataset.id; S.openDoc.has(id) ? S.openDoc.delete(id) : S.openDoc.add(id); render(); },
   edit(el) { S.editing = el.dataset.id; S.editVal = st().premises[el.dataset.id].value; render(); },
