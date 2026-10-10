@@ -687,7 +687,7 @@ function tkGuide() {
   let seen = false; try { seen = localStorage.getItem("puffin.tkGuide") === "1"; } catch {}
   if (seen || S.tkGuideOff) return "";
   return `<div class="tk-guide" role="note"><b>这是这件事的经历</b>
-    <div class="tk-legend"><span><i class="lg agent"></i>云朵小管家做的</span><span><i class="lg user"></i>你做的</span><span><i class="lg warn"></i>条件变化</span></div>
+    <div class="tk-legend"><span><i class="lgd agent"></i>云朵小管家做的</span><span><i class="lgd user"></i>你做的</span><span><i class="lgd warn"></i>条件变化</span></div>
     <div>实心的节点可以回到那时；悬停看是什么事，点开看当时和现在的差别。</div>
     <button class="btn sm mint" data-act="tk-guide-ok">知道了</button></div>`;
 }

@@ -535,11 +535,11 @@ button.who:hover .home-ic{color:var(--mint)}
 .tk.rb .tk-dot::after{content:"";position:absolute;right:-3px;top:-3px;width:9px;height:9px;border-radius:50%;background:var(--blue);border:2px solid #fff}
 .tk-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink3);align-items:center}
 .tk-legend span{display:inline-flex;align-items:center;gap:5px}
-.lg{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid}
-.lg.agent{border-color:var(--mint)}.lg.user{border-color:var(--ink2)}.lg.warn{border-color:#d29a3a}
-.lg.rb{background:var(--blue);border-color:var(--blue);width:8px;height:8px}
-.lg{flex:none;box-sizing:border-box}.lg.rb{width:9px;height:9px;border-width:0}
-.tk-legend .lg{width:10px!important;height:10px!important;padding:0!important;min-width:0}.tk-legend .lg.rb{width:9px!important;height:9px!important}
+.lgd{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid}
+.lgd.agent{border-color:var(--mint)}.lgd.user{border-color:var(--ink2)}.lgd.warn{border-color:#d29a3a}
+.lgd.rb{background:var(--blue);border-color:var(--blue);width:8px;height:8px}
+.lgd{flex:none;box-sizing:border-box}.lgd.rb{width:9px;height:9px;border-width:0}
+.tk-legend .lgd{width:10px!important;height:10px!important;padding:0!important;min-width:0}.tk-legend .lgd.rb{width:9px!important;height:9px!important}
 
 /* 经历轴：简化为圆点，颜色表示谁，实心表示可回到那时 */
 .track .tk-dot{width:16px;height:16px;margin:6px 0;border-width:2.5px;background:#fff}
@@ -553,7 +553,7 @@ button.who:hover .home-ic{color:var(--mint)}
 
 .tk-guide{position:relative;align-self:flex-start;max-width:420px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7;display:flex;flex-direction:column;gap:6px;margin-top:4px;box-shadow:0 8px 24px rgba(27,43,51,.18);animation:hintin .3s ease-out}
 .tk-guide::before{content:"";position:absolute;left:22px;top:-5px;width:12px;height:12px;background:var(--ink);transform:rotate(45deg);border-radius:2px}
-.tk-guide .tk-legend{color:#fff}.tk-guide .lg.user{border-color:#C9D3D6}
+.tk-guide .tk-legend{color:#fff}.tk-guide .lgd.user{border-color:#C9D3D6}
 .tk-guide .btn{align-self:flex-end}
 
 /* 冒泡提醒 */
