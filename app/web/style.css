@@ -540,3 +540,13 @@ button.who:hover .home-ic{color:var(--mint)}
 .lg.rb{background:var(--blue);border-color:var(--blue);width:8px;height:8px}
 .lg{flex:none;box-sizing:border-box}.lg.rb{width:9px;height:9px;border-width:0}
 .tk-legend .lg{width:10px!important;height:10px!important;padding:0!important;min-width:0}.tk-legend .lg.rb{width:9px!important;height:9px!important}
+
+/* 经历轴：简化为圆点，颜色表示谁，实心表示可回到那时 */
+.track .tk-dot{width:16px;height:16px;margin:6px 0;border-width:2.5px;background:#fff}
+.track .tk-dot svg{display:none}
+.track .tk.rb .tk-dot::after{display:none}
+.track .tk.t-agent.rb .tk-dot{background:var(--mint)}
+.track .tk.t-user.rb .tk-dot{background:var(--ink2)}
+.track .tk.t-warn.rb .tk-dot{background:#d29a3a}
+.track .tk.on .tk-dot{box-shadow:0 0 0 4px var(--green-bg);transform:scale(1.15)}
+.track-row::before{top:13px}

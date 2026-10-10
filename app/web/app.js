@@ -655,9 +655,9 @@ function trackStrip(c) {
   const s = st(), evs = cardEvents(s, c).filter((e) => TRACK_TYPES.has(e.type)); if (!evs.length) return "";
   const pick = S.tlEvent ? evs.find((e) => e.id === S.tlEvent) : null;
   const dot = (e) => `<button class="tk ${pick?.id === e.id ? "on" : ""} ${e.payload.snapshot && snapDiff(c, e.payload.snapshot).length ? "rb" : ""} t-${e.type === "premise_changed" ? "warn" : e.actor === "user" ? "user" : "agent"}" data-act="tk" data-id="${e.id}" aria-label="${esc(e.summary)}">
-      <span class="tk-dot">${evIcon(e.type)}</span><span class="tk-d">${shortDate(e.at)}</span><span class="tk-tip">${esc(e.summary)}</span></button>`;
+      <span class="tk-dot"></span><span class="tk-d">${shortDate(e.at)}</span><span class="tk-tip">${esc(e.summary)}</span></button>`;
   return `<div class="track"><div class="track-row">${evs.map(dot).join("")}<span class="tk now"><span class="tk-dot"></span><span class="tk-d">现在</span></span></div>
-    ${pick ? trackDetail(c, pick) : `<div class="tk-legend"><span><i class="lg agent"></i>云朵小管家做的</span><span><i class="lg user"></i>你做的</span><span><i class="lg warn"></i>条件变化</span><span><i class="lg rb"></i>可以回到那时</span><span class="faint">· 点节点看当时的样子</span></div>`}</div>`;
+    ${pick ? trackDetail(c, pick) : `<div class="tk-legend"><span><i class="lg agent"></i>云朵小管家</span><span><i class="lg user"></i>你</span><span><i class="lg warn"></i>条件变化</span><span class="faint">· 实心的节点可以回到那时，悬停看是什么事</span></div>`}</div>`;
 }
 function trackDetail(c, e) {
   const s = st(), snap = e.payload.snapshot, who = { user: "你", agent: "云朵小管家", watcher: "云朵小管家" }[e.actor];
