@@ -406,7 +406,7 @@ function startCards() {
   const cal = Object.values(st()?.grants ?? {}).find((g) => g.source === "calendar" && !g.revokedAt && !g.filter?.projectId && !g.filter?.cardId);
   const card = (act, t, sub, extra = "") => `<button class="prompt" data-act="${act}"><b>${t}</b><small>${sub}</small>${extra}</button>`;
   const c2 = S.folder ? `<div class="prompt done"><b>接管项目文件夹</b><small>正在关注「${esc(S.folder.name)}」，有变动会提醒你</small></div>`
-    : "showDirectoryPicker" in window ? card("folder", "接管项目文件夹", "丝滑推进项目执行")
+    : "showDirectoryPicker" in window ? card("folder-start", "接管项目文件夹", "丝滑推进项目执行")
     : `<div class="prompt done"><b>接管项目文件夹</b><small>需要用 Chrome 或 Edge 打开</small></div>`;
   const c3 = cal ? `<div class="prompt done"><b>连上日历</b><small>已连接，变化帮你盯着</small></div>`
     : S.calOpen ? `<div class="prompt open"><b>连上日历</b>${calConnect("home")}<button class="choice sm" data-act="cal-open" style="align-self:flex-start">取消</button></div>`
@@ -1021,7 +1021,7 @@ function reportChanges(changes, proposals = []) {
 const folderKey = () => `folder:${S.wsId}`;
 const stem = (n) => n.replace(/[-_ ]?v\d+(?=\.\w+$)/i, "");
 async function pickFolder(pid) {
-  let handle; try { handle = await window.showDirectoryPicker({ mode: "read" }); } catch { return; }
+  let handle; try { handle = await window.showDirectoryPicker({ mode: "read" }); } catch { return null; }
   const isCard = !!(pid && st().workCards[pid]), pname = pid ? (isCard ? st().workCards[pid].title : st().projects[pid]?.name) : "";
   const g = await api("/grants", { source: "local_folder", scopeLabel: `读取本机文件夹「${handle.name}」（只读，网页开着时${pid ? `，仅「${pname}」` : ""}）`, filter: { dir: handle.name, where: "browser", ...(pid ? (isCard ? { cardId: pid } : { projectId: pid }) : {}) }, permissions: ["read", "watch"] });
   const key = pid ? `${folderKey()}:${pid}` : folderKey();
@@ -1030,20 +1030,42 @@ async function pickFolder(pid) {
   if (pid) { S.pfolders = { ...(S.pfolders ?? {}), [pid]: F }; } else S.folder = F;
   await withBusy(`我在看「${handle.name}」里有什么`, () => scanFolder(F));
   folderLoop();
+  return F;
+}
+const SKIP_DIR = /^(\.|node_modules$|dist$|build$|out$|target$|vendor$|__pycache__$|coverage$)/;
+/** 递归列出文件夹里能读的文本文件（最多 3 层，跳过隐藏目录和依赖/构建目录），按相对路径 */
+async function* walkFolder(dir, prefix = "", depth = 0) {
+  for await (const entry of dir.values()) {
+    if (entry.name.startsWith(".")) continue;
+    if (entry.kind === "directory") { if (depth < 3 && !SKIP_DIR.test(entry.name)) yield* walkFolder(entry, `${prefix}${entry.name}/`, depth + 1); continue; }
+    if (entry.kind === "file" && TEXT_EXT.test(entry.name)) yield [`${prefix}${entry.name}`, entry];
+  }
 }
 async function scanFolder(F) {
-  if (!F) return; let n = 0;
-  for await (const entry of F.handle.values()) {
-    if (entry.kind !== "file" || !TEXT_EXT.test(entry.name) || entry.name.startsWith(".")) continue;
-    const file = await entry.getFile(), prev = F.files[entry.name];
+  if (!F) return; let n = 0; F.skipped = 0;
+  for await (const [path, entry] of walkFolder(F.handle)) {
+    const file = await entry.getFile(), prev = F.files[path];
     if (prev && prev.lm === file.lastModified && prev.size === file.size) continue;
-    if (file.size > 1_000_000 || ++n > 20) continue;
-    const sib = prev ?? Object.entries(F.files).filter(([k]) => k !== entry.name && stem(k) === stem(entry.name)).map(([, v]) => v).pop();
-    const r = await api("/materials", { title: entry.name, text: await readText(file), source: "local_folder", ref: `${F.name}/${entry.name}`, supersedes: sib?.evidenceId });
-    F.files[entry.name] = { lm: file.lastModified, size: file.size, evidenceId: r.result.evidence.id };
+    if (file.size > 1_000_000 || ++n > 40) { F.skipped++; continue; }
+    const sib = prev ?? Object.entries(F.files).filter(([k]) => k !== path && stem(k) === stem(path)).map(([, v]) => v).pop();
+    const r = await api("/materials", { title: path, text: await readText(file), source: "local_folder", ref: `${F.name}/${path}`, supersedes: sib?.evidenceId });
+    F.files[path] = { lm: file.lastModified, size: file.size, evidenceId: r.result.evidence.id };
   }
   checkAlerts();
   store.set(F.key ?? folderKey(), JSON.stringify({ name: F.name, files: F.files })); render();
+}
+/** 接管一个项目文件夹：连上 → 读一遍 → 理成一张「持续关注项目进展」工作卡。失败时说清原因，不只是连上就结束 */
+async function takeOverFolder() {
+  const c = SCENES.release;
+  const F = await pickFolder(); if (!F) return false;
+  const s = st(), ids = Object.values(F.files).map((f) => f.evidenceId).filter((id) => id && s.evidence[id]);
+  if (!ids.length) { toast(`「${F.name}」里没找到我能读的文件。我会读 ${"txt、md、rtf、csv、json、ics"} 文件（含 3 层以内的子文件夹）；Word、PDF 暂不支持，可以另存为 txt / md 再放进来。文件夹已连上，之后放进去的文件我会看到`, true); return false; }
+  await withBusy(`我读了「${F.name}」里的 ${ids.length} 个文件，正在把项目进展理一理\n要一小会儿，可以先喝口水`, async () => {
+    const r = await api("/candidates", { text: `${c.title}：${F.name}`, brief: c.frame });
+    const d = await api(`/cards/${r.result.id}/draft`, { evidenceIds: ids.slice(-30) });
+    openCard(d.result.id);
+  });
+  return true;
 }
 const allFolders = () => [S.folder, ...Object.values(S.pfolders ?? {})].filter(Boolean);
 let folderTimer;
@@ -1096,17 +1118,8 @@ const actions = {
   why() { S.why = !S.why; render(); },
   scene(el) { S.scene = el.dataset.id; S.sceneIn = {}; render(); },
   "close-scene"() { S.scene = null; render(); },
-  async "scene-folder"() {
-    const c = SCENES.release; S.scene = null; render();
-    await pickFolder(); if (!S.folder) return;
-    const ids = Object.values(S.folder.files).map((f) => f.evidenceId).filter(Boolean);
-    if (!ids.length) return toast("这个文件夹里没有我能读的文件（txt / md / csv / json）", true);
-    return withBusy("我在读这个文件夹，把项目进展理一理\n要一小会儿，可以先喝口水", async () => {
-      const r = await api("/candidates", { text: `${c.title}：${S.folder.name}`, brief: c.frame });
-      const d = await api(`/cards/${r.result.id}/draft`, { evidenceIds: ids });
-      openCard(d.result.id);
-    });
-  },
+  async "scene-folder"() { if (await takeOverFolder().catch((e) => { toast(e.message, true); return false; })) { S.scene = null; render(); } },
+  "folder-start": () => takeOverFolder().catch((e) => toast(e.message, true)),
   "scene-vfolder"() {
     const c = SCENES.release; S.scene = null;
     return withBusy("我在读示例项目文件夹，把项目进展理一理\n要一小会儿，可以先喝口水", async () => {
