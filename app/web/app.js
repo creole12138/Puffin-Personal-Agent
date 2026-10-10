@@ -85,6 +85,7 @@ function render() {
   $app.innerHTML = S.wsId ? shell() : landing();
   if (S.wsId && S.preview) $app.insertAdjacentHTML("beforeend", previewModal());
   if (S.wsId && S.scene) $app.insertAdjacentHTML("beforeend", sceneModal());
+  if (S.wsId && S.vfModal) $app.insertAdjacentHTML("beforeend", vfModal());
   if (S.wsId && S.mats) $app.insertAdjacentHTML("beforeend", matsModal());
   if (S.busy) $app.insertAdjacentHTML("beforeend", `<div class="busy"><div class="box2">${AV(44, 39)}<div>${S.busy.split("\n").map((t, i) => `<div class="${i ? "s12 muted" : ""}">${esc(t)}</div>`).join("")}</div><div class="spin"></div></div></div>`);
   if (keep) { const el = $app.querySelector(`[data-keep="${keep}"]`); if (el) { el.focus(); try { el.setSelectionRange(...sel); } catch {} } }
@@ -188,7 +189,7 @@ function connectors(grants, cal) {
   const soon = [["mail", "Gmail"], ["code", "GitHub"], ["drive", "Google Drive"], ["health", "Apple Health"]]
     .map(([k, n]) => row(k, n, "", `<button class="cn-soon" data-act="soon" data-v="${n}">即将支持</button>`, "off")).join("");
   const ex = exGrant ? row("folder", "示例文件夹「对齐材料」（模拟）", "Q4 规划示例自带，无需创建", "", "on") : "";
-  const vf = Object.values(st().evidence).some((e) => e.ref?.startsWith(`${VF}/`)) ? row("folder", "示例项目文件夹（模拟）", "正在关注 · 3 个文件", "", "on") : "";
+  const vf = Object.values(st().evidence).some((e) => e.ref?.startsWith(`${VF}/`)) ? row("folder", "示例项目文件夹（模拟）", "正在关注 · 3 个文件", `<button class="cn-btn" data-act="vf-show">打开</button>`, "on") : "";
   return folder + ex + vf + calRow + `<div class="cn-sep">示意 · 即将支持</div>` + soon;
 }
 function matsModal() {
@@ -271,14 +272,21 @@ const VF_FILES = [
 ];
 const latestOf = (ref) => { const s = st(), list = Object.values(s.evidence).filter((e) => e.ref === ref); return list.find((e) => !list.some((x) => x.supersedes === e.id)); };
 const vfFiles = () => VF_FILES.map(([n]) => latestOf(`${VF}/${n}`)).filter(Boolean);
+function vfList() {
+  return vfFiles().map((e) => { const n = e.ref.slice(VF.length + 1), open = S.vEdit === e.ref;
+    return `<div class="vf-f"><button class="out-file" data-act="vf-open" data-ref="${esc(e.ref)}">${ICON_FILE}<span>${esc(n)}</span></button>${e.supersedes ? `<span class="tag ok">刚改过</span>` : ""}</div>
+      ${open ? `<div class="vf-ed"><textarea rows="7" data-bind="vText" data-keep="vtext">${esc(S.vText)}</textarea><div class="row" style="gap:8px;justify-content:flex-end"><button class="choice sm" data-act="vf-open" data-ref="${esc(e.ref)}">取消</button><button class="btn sm mint" data-act="vf-save" data-ref="${esc(e.ref)}">保存</button></div></div>` : ""}`; }).join("");
+}
 function vfPanel(c) {
   const s = st();
-  if (!(c.originEvidenceIds ?? []).some((id) => s.evidence[id]?.ref?.startsWith(`${VF}/`))) return "";
-  return `<div class="panel pad24 vf"><div class="row" style="justify-content:space-between"><div class="lbl">${ICON_FOLDER} 示例项目文件夹（模拟）· 我正在关注</div><span class="s12 faint">当项目文件信息有变化时，我会提醒你</span></div>
-    ${vfFiles().map((e) => { const n = e.ref.slice(VF.length + 1), open = S.vEdit === e.ref;
-      return `<div class="vf-f"><button class="out-file" data-act="vf-open" data-ref="${esc(e.ref)}">${ICON_FILE}<span>${esc(n)}</span></button>${e.supersedes ? `<span class="tag ok">刚改过</span>` : ""}</div>
-        ${open ? `<div class="vf-ed"><textarea rows="7" data-bind="vText" data-keep="vtext">${esc(S.vText)}</textarea><div class="row" style="gap:8px;justify-content:flex-end"><button class="choice sm" data-act="vf-open" data-ref="${esc(e.ref)}">取消</button><button class="btn sm mint" data-act="vf-save" data-ref="${esc(e.ref)}">保存</button></div></div>` : ""}`; }).join("")}
-  </div>`;
+  if (S.vfModal || !(c.originEvidenceIds ?? []).some((id) => s.evidence[id]?.ref?.startsWith(`${VF}/`))) return "";
+  return `<div class="panel pad24 vf"><div class="row" style="justify-content:space-between"><div class="lbl">${ICON_FOLDER} 示例项目文件夹（模拟）· 我正在关注</div><span class="s12 faint">当项目文件信息有变化时，我会提醒你</span></div>${vfList()}</div>`;
+}
+function vfModal() {
+  if (!S.vfModal) return "";
+  return `<div class="modal-bg" data-act="vf-close"><div class="modal" role="dialog" aria-label="示例项目文件夹" data-act="noop">
+    <div class="modal-h">${ICON_FOLDER}<b>示例项目文件夹（模拟）</b><span class="s12 faint" style="margin-left:6px">改一个文件并保存，我会判断牵动了什么</span><span style="flex:1"></span><button class="x-btn" data-act="vf-close" aria-label="关闭"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div style="padding:6px 22px 16px;overflow:auto">${vfList()}</div></div></div>`;
 }
 function visibleScenes() {
   const refs = new Set(Object.values(st()?.evidence ?? {}).map((e) => e.ref));
@@ -936,12 +944,14 @@ const actions = {
       openCard(d.result.id);
     });
   },
+  "vf-show"() { S.vfModal = true; S.vEdit = null; render(); },
+  "vf-close"() { S.vfModal = false; S.vEdit = null; render(); },
   "vf-open"(el) { const ref = el.dataset.ref; if (S.vEdit === ref) { S.vEdit = null; } else { S.vEdit = ref; S.vText = latestOf(ref)?.excerpt ?? ""; } render(); },
   "vf-save": (el) => withBusy("文件夹里有文件变了，我看看", async () => {
     const old = latestOf(el.dataset.ref); if (!old) return;
     if (S.vText.trim() === old.excerpt.trim()) { S.vEdit = null; return toast("内容没有变化"); }
     const r = await api("/materials", { title: el.dataset.ref.slice(VF.length + 1), text: S.vText, source: "local_folder", ref: old.ref, supersedes: old.id });
-    S.vEdit = null;
+    S.vEdit = null; if (r.result.proposals?.some((p) => p.status === "pending")) S.vfModal = false;
     if (!reportChanges(r.result.changes, r.result.proposals)) toast("看过了，这次改动没有改变卡上的判断");
   }),
   "sim-pr": () => withBusy("Git 仓库里有新动静，我看看", async () => {
@@ -1032,7 +1042,7 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("input", (e) => { const k = e.target.dataset?.bind; if (k) S[k] = e.target.value; const sk = e.target.dataset?.scene; if (sk) S.sceneIn[sk] = e.target.value; });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && (S.preview || S.mats || S.navCal || S.scene)) { S.preview = null; S.mats = false; S.navCal = false; S.scene = null; render(); return; }
+  if (e.key === "Escape" && (S.preview || S.mats || S.navCal || S.scene || S.vfModal)) { S.preview = null; S.mats = false; S.navCal = false; S.scene = null; S.vfModal = false; render(); return; }
   const b = e.target.dataset?.bind;
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "chatText") { e.preventDefault(); actions.send(); }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && b === "ask") { e.preventDefault(); actions.tell(); }
